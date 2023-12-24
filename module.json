@@ -1,0 +1,18 @@
+{
+    "id": "fu-parser",
+    "title": "Fabula Ultima pdf parser",
+    "description": "Parse the Fabula Ultima pdf for importing.",
+    "authors": [
+      {
+      "name": "xeqi"
+      }
+    ],
+    "version": "0.0.1",
+    "compatibility": {
+      "minimum": "10",
+      "verified": "11"
+    },
+    "esmodules": [
+        "main.js"
+    ]
+  }
