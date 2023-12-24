@@ -1,0 +1,63 @@
+name: NodeJS with Webpack
+
+env:
+  project_url: "https://github.com/${{github.repository}}"
+
+  latest_manifest_url: "https://github.com/${{github.repository}}/releases/latest/download/module.json"
+
+  release_module_url: "https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/fu-parser.zip"
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Extract Version From Tag
+      id: get_version
+      uses: battila7/get-version-action@v2
+
+    - name: Modify System Manifest With Release-Specific Values
+      id: sub_manifest_link_version
+      uses: cschleiden/replace-tokens@v1
+      with:
+        files: 'module.json'
+      env:
+        VERSION: ${{steps.get_version.outputs.version-without-v}}
+        URL: ${{ env.project_url }}
+        MANIFEST: ${{ env.latest_manifest_url }}
+        DOWNLOAD: ${{ env.release_module_url }}
+
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+
+    - name: Build
+      run: |
+        npm install
+        npx webpack
+
+    - name: Create System Archive
+      run: |
+        zip -r fu-parser.zip dist/*
+
+    - name: Update Release With Files
+      id: create_version_release
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        name: ${{ github.event.release.name }}
+        draft: ${{ github.event.release.draft }}
+        prerelease: ${{ github.event.release.prerelease }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        artifacts: './module.json, ./fu-parser.zip'
+        tag: ${{ github.event.release.tag_name }}
+        body: ${{ github.event.release.body }}
