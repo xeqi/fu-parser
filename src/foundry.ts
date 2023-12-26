@@ -180,6 +180,7 @@ export type Actor = {
 	type: "npc";
 	name: string;
 	img: string;
+	prototypeToken: { texture: { src: string } };
 	folder?: string;
 	system: {
 		level: { value: number };

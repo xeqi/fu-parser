@@ -390,6 +390,7 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 				type: "npc" as const,
 				name: b.name,
 				img: imagePath + "/" + b.name + ".png",
+				prototypeToken: { texture: { src: imagePath + "/" + b.name + ".png" } },
 				folder: folder._id,
 			};
 			await saveImage(b.image, b.name + ".png", imagePath);
