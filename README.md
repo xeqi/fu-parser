@@ -1,11 +1,8 @@
 # Fabula Ultima pdf importer
 
-This [Foundry Virtual Tabletop](https://foundryvtt.com/) module is designed to work with [Unofficial Fabula Ultima System](https://github.com/League-of-Fabulous-Developers/FoundryVTT-Fabula-Ultima), and will import data from an english pdf, watermarked by DriveThruRPG, of [Fabula Ultima](https://www.needgames.it/fabula-ultima-en/) by [Need Games](https://www.needgames.it/).
-
-It will currently import and create Items and Actors for:
-* Armor, Accessories, Shields, Weapons
-* Consumable Items
-* Beastiary
+This [Foundry Virtual Tabletop](https://foundryvtt.com/) module is designed to work with [Unofficial Fabula Ultima System](https://github.com/League-of-Fabulous-Developers/FoundryVTT-Fabula-Ultima).  It add buttons for importing data from:
+1. an english pdf, watermarked by DriveThruRPG, of [Fabula Ultima](https://www.needgames.it/fabula-ultima-en/) by [Need Games](https://www.needgames.it/)
+2. [Fultimator!](https://fabula-ultima-helper.web.app/)
 
 ## Installation
 
@@ -13,8 +10,16 @@ It will currently import and create Items and Actors for:
 2. Click the "Install Module" button on the bottom left.
 3. Paste`https://github.com/xeqi/fu-parser/releases/latest/download/module.json` into the "Manifest URL:" field on the bottom.
 4. Click "Install".
+5. Launch a game world and go to Game Settings > Manage Modules and enable the module.
 
-## How to import data
+## PDF Import
+
+It will currently import and create Items and Actors for:
+* Armor, Accessories, Shields, Weapons
+* Consumable Items
+* Beastiary
+
+### Instructions
 
 1. Install the module and confirm it shows up in "Add-on Modules" on the setup page.
 2. Launch a game world and go to Game Settings > Manage Modules and enable the module.
@@ -23,22 +28,38 @@ It will currently import and create Items and Actors for:
 5. Review the parse information provided.
 6. Click on "Import Data"
 
-## Debugging
+### Debugging
 
 This project is still in its early days.  Chances are your pdf will not work. Bad parses should provide a list of failed parses in the preview output. That information could be useful to compare against the parsers and determine what fix needs to occur.
 
-## The Future
-Future additions will include:
-* Error reporting for bad parses
-* Better parsing of Beastiary skills/spells descriptions to pull out damage information
-* Import Classes + Skills/Spells
-* More robust parsing
+## Fulminator Import
+
+Fulminator provides a json export file for npcs.  This file can be used to import data into your world.
+
+Currently the following are unsupported:
+1. Phases
+2. Multipart
+3. Notes
+
+### Instructions 
+1. Go to the Game Settings menu and there will be a "FU Importer" heading with an "Import Fulminator" button.
+2. Paste the contents of the json export file from Fultimator
+3. Review any error information provided.
+4. Click on "Import Data"
+
 
 ## Contributing
 
+### The Future
+Future additions will include:
+* Better parsing of Beastiary skills/spells descriptions to pull out damage information
+* Import Classes + Skills/Spells from PDF
+
 ### Code Overview
 
-This module uses [PDF.js](https://mozilla.github.io/pdf.js/) to read the pdf and act like a lexer to create a `Token[]`.  This `Token[]` is read by parsers built using applicative parser combinators. The resulting parses provide a datastructure that gets transformed into a Foundry `Item` or `Actor` based on the template definitions of [Unofficial Fabula Ultima System](https://github.com/League-of-Fabulous-Developers/FoundryVTT-Fabula-Ultima), or an `ImageBitmap` that can be sent to the Foundry server to be saved/hosted.
+This module mainly consists of two Foundry `Application`s that convert data from an import string to a Foundry `Item` or `Actor` based on the template definitions of [Unofficial Fabula Ultima System](https://github.com/League-of-Fabulous-Developers/FoundryVTT-Fabula-Ultima).
+
+For PDF parsing this module uses [PDF.js](https://mozilla.github.io/pdf.js/) to read the pdf and act like a lexer to create a `Token[]`.  This `Token[]` is read by parsers built using applicative parser combinators.  The resulting datastructure is used to import the information.
 
 ### Local Installation
 

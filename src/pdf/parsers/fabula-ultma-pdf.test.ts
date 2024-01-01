@@ -1,13 +1,13 @@
 import { describe, expect, test } from "@jest/globals";
 import fs from "fs";
-import { tokenizePDF } from "./lexers/pdf";
-import { armorPage } from "./parsers/armorPage";
-import { Parser, isResult } from "./parsers/lib";
-import { consumablesPage } from "./parsers/consumablePage";
-import { beastiary } from "./parsers/beastiaryPage";
-import { basicWeapons, rareWeapons } from "./parsers/weaponPage";
-import { accessories } from "./parsers/accessoryPage";
-import { shieldPage } from "./parsers/shieldPage";
+import { tokenizePDF } from "../lexers/pdf";
+import { consumablesPage } from "./consumablePage";
+import { Parser, isResult } from "./lib";
+import { basicWeapons, rareWeapons } from "./weaponPage";
+import { armorPage } from "./armorPage";
+import { shieldPage } from "./shieldPage";
+import { accessories } from "./accessoryPage";
+import { beastiary } from "./beastiaryPage";
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";

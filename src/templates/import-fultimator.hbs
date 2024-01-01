@@ -1,0 +1,15 @@
+<form>
+    <div style="display:flex; flex-direction: column; height: 100%">
+        <div style="flex: 1 1">
+            <textarea name="text" placeholder="Your Fultimator import string"style="height:100%; resize: none">{{text}}</textarea>
+        </div>
+        {{#if error}}
+        <div style="flex: 0 0; color: red">
+            {{error}}
+        </div>
+        {{/if}}
+        <div style="flex: 0 0; width: 75%; padding: 10px">
+            <button id="sub" {{#if disabled}}disabled{{/if}}>Import Data</button>
+        </div>
+    </div>
+</form>
