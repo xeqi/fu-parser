@@ -12,7 +12,7 @@ import { shieldPage } from "./parsers/shieldPage";
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
 
-const withPage = await tokenizePDF({
+const [withPage, destroy] = await tokenizePDF({
 	data: new Uint8Array(fs.readFileSync(FABULA_ULTIMA_PDF_PATH)),
 	standardFontDataUrl: STANDARD_FONT_DATA_URL,
 });
@@ -91,4 +91,6 @@ describe("parses pages", () => {
 	// 		expect(parses.filter(isResult).length).toBe(1);
 	// 	});
 	// });
+
+	afterAll(() => destroy());
 });

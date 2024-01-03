@@ -15,6 +15,9 @@
     "esmodules": [
         "main.js"
     ],
+    "styles": [
+      "style.css"
+    ],
     "url": "#{URL}#",
     "manifest": "#{MANIFEST}#",
     "download": "#{DOWNLOAD}#"

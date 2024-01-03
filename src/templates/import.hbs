@@ -1,0 +1,57 @@
+<form>
+    <div class="fu-parser-pdf-form">
+        <div style="flex: 0 1">
+            <div>
+                <div style="display:grid; grid-template-columns: 75% 20%; grid-gap: 10px 5%">
+                    <div><input type="text" name="pdfPath" placeholder="Path to your pdf" value="{{pdfPath}}"/></div>
+                    <div>{{ filePicker type="pdf" target="pdfPath"}}</div>
+                    <div><input type="text" name="imagePath" placeholder="Path to save images" value="{{imagePath}}"/></div>
+                    <div>{{ filePicker type="folder" target="imagePath"}}</div>
+                </div>
+            </div>
+        </div>
+        <div style="flex: 0 0; width: 75%; padding: 10px 0">
+            <button id="sub" {{#if disabled}}disabled{{/if}}>Import Data</button>
+        </div>
+        <div class="fu-parser-parse-list">
+            {{#if (gt parseResults.length 0)}}
+            <h2>Preview:</h2>
+            {{#each parseResults}}
+             
+                {{#if (eq this.type "success") }}
+                <div class="fu-parser-parse-success fu-parser-collapsible fu-parser-selectable">
+                    Page {{this.page}} - OK
+                </div>
+                <div class="fu-parser-content">
+                    {{#each this.results}}
+                        <div class="fu-parser-selectable">{{this.name}}</div>
+                    {{/each}}
+                </div>
+                {{else}}
+                <div class="fu-parser-parse-failure fu-parser-collapsible fu-parser-selectable">
+                    Page {{this.page}} - failure
+                </div>
+                <div class="fu-parser-content">
+                    
+                    {{#if (eq this.type "too many") }}
+                    <div class="fu-parser-selectable">Successful parses: {{this.count}}</div>
+                    {{/if}}
+                    <h2 class="fu-parser-selectable">Failed parses:</h2>
+                    <div class="fu-parser-selectable" style="display:grid; grid-template-columns: 15% 12% 70%; grid-gap: 10px 5%">
+                        <div class="fu-parser-selectable">Token #</div>
+                        <div class="fu-parser-selectable">Looking for</div>
+                        <div class="fu-parser-selectable">Found</div>
+                        {{#each this.errors}}
+                            <div class="fu-parser-selectable">{{this.distance}}</div>
+                            <div class="fu-parser-selectable">{{this.error}}</div>
+                            <div class="fu-parser-selectable">{{this.found}}</div>
+                        {{/each}}
+                    </div>
+                </div>
+                    
+                {{/if}}
+            {{/each}}
+            {{/if}}
+        </div>
+    </div>
+</form>

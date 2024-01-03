@@ -20,11 +20,12 @@ It will currently import and create Items and Actors for:
 2. Launch a game world and go to Game Settings > Manage Modules and enable the module.
 3. Once enabled go to the Game Settings menu and there will be a "FU Importer" heading with an "Import PDF" button.
 4. Provide the pdf and determine the directory you would like to save extracted images.
-5. Click on "Import Data"
+5. Review the parse information provided.
+6. Click on "Import Data"
 
 ## Debugging
 
-This project is still in its early days.  Chances are your pdf will not work.  If you open the developer console and filter lines by "parses", you can see a list of failed pages and the corresponding failed parses. That output might be useful for adapting the parsers to your specific pdf.
+This project is still in its early days.  Chances are your pdf will not work. Bad parses should provide a list of failed parses in the preview output. That information could be useful to compare against the parsers and determine what fix needs to occur.
 
 ## The Future
 Future additions will include:

@@ -2,6 +2,7 @@ const TerserPlugin = require("terser-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 
 module.exports = {
+	mode: "production",
 	entry: {
 		main: "./src/main.ts",
 		"pdf.worker": "pdfjs-dist/build/pdf.worker.mjs",
@@ -32,7 +33,8 @@ module.exports = {
 		new CopyPlugin({
 			patterns: [
 				{ from: "module.json", to: "module.json" },
-				{ from: "templates", to: "templates" },
+				{ from: "src/style.css", to: "style.css" },
+				{ from: "src/templates", to: "templates" },
 			],
 		}),
 	],

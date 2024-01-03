@@ -5,7 +5,7 @@ export const nextToken = ([a, i]: PTR): Token | null => a[i];
 export const inc = ([a, i]: PTR): PTR => [a, i + 1];
 export const end = ([a, i]: PTR): boolean => a.length <= i;
 
-type ErrorPoint = { error: string; distance: number; found: unknown };
+type ErrorPoint = { error: string; distance: number; found: string | StringToken };
 export type Parse<R> = { result: [R, PTR] } | ErrorPoint;
 export type Parser<R> = (i: PTR) => Parse<R>[];
 export const result = <R>(r: R, i: PTR): Parse<R> => {
@@ -13,7 +13,7 @@ export const result = <R>(r: R, i: PTR): Parse<R> => {
 };
 export const isResult = <R>(p: Parse<R>): p is { result: [R, PTR] } => "result" in p;
 export const isError = <R>(p: Parse<R>): p is ErrorPoint => "error" in p;
-const error = (error: string, distance: number, found: unknown) => {
+const error = (error: string, distance: number, found: string | StringToken) => {
 	return { error, distance, found };
 };
 

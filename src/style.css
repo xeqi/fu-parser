@@ -1,0 +1,73 @@
+/* Style the button that is used to open and close the collapsible content */
+.fu-parser-parse-success {
+    color: #3a3a3a;
+    background-color: #b3edc2;
+    padding: 5px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    user-select: text;
+    cursor: pointer;
+}
+
+.fu-parser-parse-failure {
+    color: #3a3a3a;
+    background-color: #e88686;
+    padding: 5px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    user-select: text;
+    cursor: pointer;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.fu-parser-active.fu-parser-parse-success,
+.fu-parser-parse-failure:hover {
+    background-color: #7faa8a;
+}
+.fu-parser-active.fu-parser-parse-failure,
+.fu-parser-parse-failure:hover {
+    background-color: #c15454;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.fu-parser-content {
+    padding: 0 18px;
+    background-color: white;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+.fu-parser-selectable {
+    user-select: text;
+}
+
+.fu-parser-collapsible:after {
+    content: '\02795';
+    /* Unicode character for "plus" sign (+) */
+    font-size: 13px;
+    color: white;
+    float: right;
+    margin-left: 5px;
+}
+
+.fu-parser-active:after {
+    content: "\2796";
+    /* Unicode character for "minus" sign (-) */
+}
+
+.fu-parser-pdf-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 10px;
+}
+
+.fu-parser-parse-list {
+    flex: 1 1;
+    padding: 10px 0px;
+}
