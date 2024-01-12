@@ -36,6 +36,8 @@ This project is still in its early days.  Chances are your pdf will not work. Ba
 
 Fulminator provides a json export file for npcs.  This file can be used to import data into your world.
 
+NPCs with equipment require that an item with the same name exists in your foundry world.  The built in ones should be available if the pdf import was used.
+
 Currently the following are unsupported:
 1. Phases
 2. Multipart
