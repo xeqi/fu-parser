@@ -12,6 +12,16 @@
       "minimum": "10",
       "verified": "11"
     },
+    "relationships":{
+      "systems":[{
+        "id": "projectfu",
+        "type": "system",
+        "manifest": "https://github.com/League-of-Fabulous-Developers/FoundryVTT-Fabula-Ultima/releases/latest/download/system.json",
+        "compatibility": {
+          "verified": "2.1.0"
+        }
+      }]
+    },
     "esmodules": [
         "main.js"
     ],
