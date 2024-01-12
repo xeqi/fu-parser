@@ -17,7 +17,7 @@ This [Foundry Virtual Tabletop](https://foundryvtt.com/) module is designed to w
 It will currently import and create Items and Actors for:
 * Armor, Accessories, Shields, Weapons
 * Consumable Items
-* Beastiary
+* Bestiary
 
 ### Instructions
 
@@ -32,9 +32,9 @@ It will currently import and create Items and Actors for:
 
 This project is still in its early days.  Chances are your pdf will not work. Bad parses should provide a list of failed parses in the preview output. That information could be useful to compare against the parsers and determine what fix needs to occur.
 
-## Fulminator Import
+## Fultimator Import
 
-Fulminator provides a json export file for npcs.  This file can be used to import data into your world.
+Fultimator provides a json export file for npcs.  This file can be used to import data into your world.
 
 NPCs with equipment require that an item with the same name exists in your foundry world.  The built in ones should be available if the pdf import was used.
 
@@ -44,7 +44,7 @@ Currently the following are unsupported:
 3. Notes
 
 ### Instructions 
-1. Go to the Game Settings menu and there will be a "FU Importer" heading with an "Import Fulminator" button.
+1. Go to the Game Settings menu and there will be a "FU Importer" heading with an "Import Fultimator" button.
 2. Paste the contents of the json export file from Fultimator
 3. Review any error information provided.
 4. Click on "Import Data"
@@ -54,7 +54,7 @@ Currently the following are unsupported:
 
 ### The Future
 Future additions will include:
-* Better parsing of Beastiary skills/spells descriptions to pull out damage information
+* Better parsing of Bestiary skills/spells descriptions to pull out damage information
 * Import Classes + Skills/Spells from PDF
 
 ### Code Overview
