@@ -422,6 +422,7 @@ export const saveBeasts = async (
 				(b.attributes.dex + b.attributes.ins) / 2;
 			const payload = {
 				system: {
+					description: b.description,
 					level: { value: b.level },
 					resources: {
 						hp: { value: b.attributes.maxHp, max: b.attributes.maxHp, min: 0, bonus: 0 },
