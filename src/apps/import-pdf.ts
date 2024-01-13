@@ -317,6 +317,8 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 						init: { value: b.attributes.init, bonus: initBonus },
 						def: { value: 0, bonus: b.equipment == null ? b.attributes.def : 0 },
 						mdef: { value: 0, bonus: b.equipment == null ? b.attributes.def : 0 },
+						accuracy: { value: 0, bonus: 0 },
+						magic: { value: 0, bonus: 0 },
 					},
 					traits: { value: b.traits },
 					species: { value: b.type.toLowerCase() },

@@ -274,6 +274,8 @@ export type FUActor = Actor & {
 			init: { value: number; bonus: number };
 			def: { value: number; bonus: number };
 			mdef: { value: number; bonus: number };
+			accuracy: { value: number; bonus: number };
+			magic: { value: number; bonus: number };
 		};
 	} & {
 		resources: {

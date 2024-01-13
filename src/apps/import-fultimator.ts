@@ -149,9 +149,16 @@ const importFultimator = async (data: Npc) => {
 				wlp: { base: data.attributes.will, current: data.attributes.will, bonus: 0 as const },
 			},
 			derived: {
-				init: { value: 0, bonus: data.extra && data.extra.init ? 4 : 0 },
+				init: {
+					value: 0,
+					bonus:
+						(data.extra && data.extra.init ? 4 : 0) +
+						(data.extra && data.extra?.extrainit ? Number(data.extra.extrainit) : 0),
+				},
 				def: { value: 0, bonus: (data.extra && data.extra.def) || 0 },
 				mdef: { value: 0, bonus: (data.extra && data.extra.mDef) || 0 },
+				accuracy: { value: 0, bonus: data.extra && data.extra.precision ? 3 : 0 },
+				magic: { value: 0, bonus: data.extra && data.extra.magic ? 3 : 0 },
 			},
 			traits: { value: data.traits || "" },
 			species: { value: data.species.toLowerCase() },
@@ -179,10 +186,7 @@ const importFultimator = async (data: Npc) => {
 						secondary: { value: convertStat(attack.attr2) },
 					},
 					accuracy: {
-						value:
-							Math.floor(data.lvl / 10) +
-							(data.extra && data.extra.precision ? 3 : 0) +
-							(data.rank == "companion" ? data.lvl || 1 : 0),
+						value: Math.floor(data.lvl / 10) + (data.rank == "companion" ? data.lvl || 1 : 0),
 					},
 					damage: {
 						value: Math.floor(data.lvl / 20) * 5 + 5 + (attack.extraDamage ? 5 : 0),
@@ -209,7 +213,6 @@ const importFultimator = async (data: Npc) => {
 						value:
 							Math.floor(data.lvl / 10) +
 							attack.weapon.prec +
-							(data.extra && data.extra.precision ? 3 : 0) +
 							(data.rank == "companion" ? data.lvl || 1 : 0) +
 							(attack.flathit ? Number(attack.flathit) : 0),
 					},
@@ -248,9 +251,7 @@ const importFultimator = async (data: Npc) => {
 									},
 									accuracy: {
 										value:
-											Math.floor(data.lvl / 10) +
-											(data.extra && data.extra.magic ? 3 : 0) +
-											(data.rank == "companion" ? data.lvl || 1 : 0),
+											Math.floor(data.lvl / 10) + (data.rank == "companion" ? data.lvl || 1 : 0),
 									},
 								}
 							: undefined,
