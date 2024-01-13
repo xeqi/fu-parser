@@ -6,7 +6,6 @@ import {
 	Distance,
 	ResistanceMap,
 	Stat,
-	TYPE_CODES,
 	accuracy,
 	alt,
 	damage,
@@ -29,8 +28,12 @@ import {
 	matches,
 	many,
 	DieSize,
+	Affinity,
 	AFFINITIES,
-	AFFINITY,
+	TypeCode,
+	DIE_SIZES,
+	DAMAGE_TYPES,
+	TYPE_CODES,
 } from "./lib";
 
 export type Beast = {
@@ -65,8 +68,8 @@ export type Beast = {
 	spells: {
 		name: string;
 		accuracy: {
-			primary: "DEX" | "MIG" | "INS" | "WLP";
-			secondary: "DEX" | "MIG" | "INS" | "WLP";
+			primary: Stat;
+			secondary: Stat;
 			bonus: number;
 		} | null;
 		mp: string;
@@ -86,7 +89,7 @@ export type Beast = {
 };
 
 const beastAttribute = (stat: Stat) =>
-	fmap(matches(new RegExp(`^${stat} d(6|8|10|12)`), stat), (t) =>
+	fmap(matches(new RegExp(`^${stat} d(${DIE_SIZES.join("|")})`), stat), (t) =>
 		Number(t.slice(stat.length + 2)),
 	) as Parser<DieSize>;
 const dex = beastAttribute("DEX");
@@ -123,25 +126,25 @@ const beastAttributes = fmap(
 	},
 );
 
-const beastResistance = (s: (typeof TYPE_CODES)[number][1]): Parser<AFFINITY> =>
+const beastResistance = (s: TypeCode): Parser<Affinity> =>
 	alt(
 		fmap(text(s), () => "N"),
-		kr(then(text(s), text(s)), matches(new RegExp(AFFINITIES.join("|")), "affinity")) as Parser<AFFINITY>,
+		kr(then(text(s), text(s)), matches(new RegExp(AFFINITIES.join("|")), "affinity")) as Parser<Affinity>,
 	);
-const beastResistances = TYPE_CODES.reduce(
-	(p, [t, c]) =>
-		fmap(then(p, beastResistance(c)), ([m, n]) => {
+const beastResistances = DAMAGE_TYPES.reduce(
+	(p, t) =>
+		fmap(then(p, beastResistance(TYPE_CODES[t])), ([m, n]) => {
 			return { ...m, [t]: n };
 		}),
-	success({} as ResistanceMap),
-);
+	success({}),
+) as Parser<ResistanceMap>;
 
 const beastAttack = fmap(
 	seq(
 		alt(
-			fmap(textWithFont("$", [/Evilz$/]), () => "melee"),
-			fmap(many1(textWithFont("a", [/fabulaultima$/])), () => "ranged"),
-		) as Parser<Distance>,
+			fmap(textWithFont("$", [/Evilz$/]), () => "melee" as const),
+			fmap(many1(textWithFont("a", [/fabulaultima$/])), () => "ranged" as const),
+		),
 		str,
 		kr(sep, accuracy),
 		kr(

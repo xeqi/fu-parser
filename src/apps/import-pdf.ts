@@ -1,5 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { Parser, Stat, flatMap, isError, isResult } from "../pdf/parsers/lib";
+import { Affinity, Parser, Stat, flatMap, isError, isResult } from "../pdf/parsers/lib";
 import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
 import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
 import { Armor, armorPage } from "../pdf/parsers/armorPage";
@@ -8,7 +8,7 @@ import { Accessory, accessories } from "../pdf/parsers/accessoryPage";
 import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
 import { StringToken } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
-import { FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
+import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -26,14 +26,20 @@ type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
 	s: (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>,
 ) => Promise<ParseResult>;
 
-enum AFF_MAPPING {
-	VU = -1,
-	N = 0,
-	RS = 1,
-	IM = 2,
-	AB = 3,
-}
+const AFF_MAPPING: Record<Affinity, number> = {
+	VU: -1,
+	N: 0,
+	RS: 1,
+	IM: 2,
+	AB: 3,
+};
 
+const STAT_MAPPING: Record<Stat, ATTR> = {
+	DEX: "dex",
+	MIG: "mig",
+	INS: "ins",
+	WLP: "wlp",
+};
 const saveConsumables = async (
 	categories: [string, Consumable[]][],
 	pageNum: number,
@@ -62,19 +68,6 @@ const saveConsumables = async (
 	}
 };
 
-const convertStat = (s: Stat) => {
-	switch (s) {
-		case "DEX":
-			return "dex" as const;
-		case "MIG":
-			return "mig" as const;
-		case "INS":
-			return "ins" as const;
-		case "WLP":
-			return "wlp" as const;
-	}
-};
-
 const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
@@ -91,8 +84,8 @@ const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: read
 						description: data.description === "No Quality." ? "" : data.description,
 						cost: { value: data.cost },
 						attributes: {
-							primary: { value: convertStat(data.accuracy.primary) },
-							secondary: { value: convertStat(data.accuracy.secondary) },
+							primary: { value: STAT_MAPPING[data.accuracy.primary] },
+							secondary: { value: STAT_MAPPING[data.accuracy.secondary] },
 						},
 						accuracy: { value: data.accuracy.bonus },
 						damage: { value: data.damage },
@@ -346,8 +339,8 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 						name: attack.name,
 						system: {
 							attributes: {
-								primary: { value: convertStat(attack.accuracy.primary) },
-								secondary: { value: convertStat(attack.accuracy.secondary) },
+								primary: { value: STAT_MAPPING[attack.accuracy.primary] },
+								secondary: { value: STAT_MAPPING[attack.accuracy.secondary] },
 							},
 							accuracy: { value: attack.accuracy.bonus },
 							damage: { value: attack.damage },
@@ -375,8 +368,8 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 									? undefined
 									: {
 											attributes: {
-												primary: { value: convertStat(spell.accuracy.primary) },
-												secondary: { value: convertStat(spell.accuracy.secondary) },
+												primary: { value: STAT_MAPPING[spell.accuracy.primary] },
+												secondary: { value: STAT_MAPPING[spell.accuracy.secondary] },
 											},
 											accuracy: { value: spell.accuracy.bonus },
 										},

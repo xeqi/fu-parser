@@ -1,11 +1,6 @@
-export enum Attributes {
-	Might = "might",
-	Dexterity = "dexterity",
-	Insight = "insight",
-	Willpower = "will",
-}
+export type Attributes = "might" | "dexterity" | "insight" | "will";
 
-export interface Weapon {
+export type Weapon = {
 	cost: number;
 	category: string;
 	prec: number;
@@ -16,36 +11,20 @@ export interface Weapon {
 	hands: number;
 	damage: number;
 	type: Elements;
-}
+};
 
-export enum Affinities {
-	Resistance = "rs",
-	Vulnerability = "vu",
-	Absorpbtion = "ab",
-	Immune = "im",
-	None = "no",
-}
+export type Affinities = "rs" | "vu" | "ab" | "im" | "no";
 
-export enum Elements {
-	Physical = "physical",
-	Wind = "wind",
-	Bolt = "bolt",
-	Dark = "dark",
-	Earth = "earth",
-	Fire = "fire",
-	Ice = "ice",
-	Light = "light",
-	Poison = "poison",
-}
+export type Elements = "physical" | "wind" | "bolt" | "dark" | "earth" | "fire" | "ice" | "light" | "poison";
 
-export interface NpcAttributes {
+export type NpcAttributes = {
 	might: number;
 	insight: number;
 	will: number;
 	dexterity: number;
-}
+};
 
-export interface NpcArmor {
+export type NpcArmor = {
 	def: number;
 	name: string;
 	init: number;
@@ -53,9 +32,9 @@ export interface NpcArmor {
 	cost: number;
 	mdef: number;
 	defbonus: number;
-}
+};
 
-export interface NpcAttack {
+export type NpcAttack = {
 	name: string;
 	range: "melee" | "distance";
 	attr1: Attributes;
@@ -63,18 +42,18 @@ export interface NpcAttack {
 	type: Elements;
 	special: string[];
 	extraDamage?: boolean;
-}
+};
 
-export interface NpcWeaponAttack {
+export type NpcWeaponAttack = {
 	extraDamage?: boolean;
 	weapon: Weapon;
 	name: string;
 	special: string[];
 	flathit?: string;
 	flatdmg?: string;
-}
+};
 
-export interface NpcSpell {
+export type NpcSpell = {
 	effect?: string;
 	target?: string;
 	duration?: string;
@@ -85,24 +64,24 @@ export interface NpcSpell {
 	attr2: Attributes;
 	mp?: string;
 	special: string[];
-}
+};
 
-export interface NpcAction {
+export type NpcAction = {
 	name: string;
 	effect: string;
-}
+};
 
-export interface NpcSpecial {
+export type NpcSpecial = {
 	name: string;
 	effect: string;
-}
+};
 
-export interface NpcRareGear {
+export type NpcRareGear = {
 	name: string;
 	effect: string;
-}
+};
 
-export interface NpcExtra {
+export type NpcExtra = {
 	init?: boolean;
 	precision?: boolean;
 	hp?: string;
@@ -111,9 +90,9 @@ export interface NpcExtra {
 	mDef?: number;
 	extrainit?: string;
 	magic?: boolean;
-}
+};
 
-export interface NpcAffinities {
+export type NpcAffinities = {
 	physical?: Affinities;
 	wind?: Affinities;
 	bolt?: Affinities;
@@ -123,14 +102,14 @@ export interface NpcAffinities {
 	light?: Affinities;
 	poison?: Affinities;
 	fire?: Affinities;
-}
+};
 
-export interface NpcNotes {
+export type NpcNotes = {
 	name: string;
 	effect: string;
-}
+};
 
-export interface Npc {
+export type Npc = {
 	id: string;
 	uid: string;
 	name: string;
@@ -141,7 +120,6 @@ export interface Npc {
 	species: string;
 	villain?: "" | "supreme" | "minor" | "major";
 	rank?: "soldier" | "elite" | "champion2" | "champion3" | "champion4" | "champion5" | "companion";
-
 	traits?: string;
 	actions?: NpcAction[];
 	extra?: NpcExtra;
@@ -154,4 +132,4 @@ export interface Npc {
 	raregear?: NpcRareGear[];
 	label?: string;
 	notes?: NpcNotes[];
-}
+};

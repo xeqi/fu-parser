@@ -13,7 +13,7 @@ declare global {
 	const Folder: { create(payload: { name: string; type: string; folder?: string }): Promise<Folder> };
 	const Item: { create<T extends Item>(payload: T): Promise<T & Document> };
 	const Actor: { create<T extends Actor>(payload: T): Promise<T & Document> };
-	class FilePicker {
+	const FilePicker: {
 		/**
 		 * Dispatch a POST request to the server containing a directory path and a file to upload
 		 * @param {string} source   The data source to which the file should be uploaded
@@ -24,15 +24,14 @@ declare global {
 		 * @param {boolean} [options.notify=true] Display a UI notification when the upload is processed
 		 * @returns {Promise<object>}  The response object
 		 */
-		static upload(
+		upload(
 			source: string,
 			path: string,
 			file: File,
 			body?: { [key: string]: string | Blob },
 			options?: { notify?: boolean },
 		): Promise<null | false | Response | Record<string, never>>;
-		constructor(options?: { [key: string]: unknown });
-	}
+	};
 	class FormApplication<T> {
 		constructor(object?: T, options?: unknown);
 		render(force?: boolean): FormApplication<T>;
@@ -117,7 +116,7 @@ export const saveImage = async (
 	return false;
 };
 
-type ATTR = "mig" | "wlp" | "dex" | "ins";
+export type ATTR = "mig" | "wlp" | "dex" | "ins";
 type DamageType = "physical" | "air" | "bolt" | "dark" | "earth" | "fire" | "ice" | "light" | "poison";
 
 type Base = {

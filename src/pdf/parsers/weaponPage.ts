@@ -31,6 +31,7 @@ import {
 	nextToken,
 	success,
 	inc,
+	WEAPON_CATEGORIES,
 } from "./lib";
 
 export type Weapon = {
@@ -58,7 +59,7 @@ const advancedStarting: Parser<WeaponCategory> = kl(
 	kr(seq(image, image, many1(str)), (ptr) => {
 		const token = nextToken(ptr);
 		if (token && isStringToken(token) && /^SAMPLE RARE .* WEAPONS$/.test(token.string)) {
-			return asWeaponCategory(token.string.slice(12, -8), ptr);
+			return asWeaponCategory(token.string.slice(12, -8).toLowerCase(), ptr);
 		}
 		return fail<WeaponCategory>("Category")(ptr);
 	}),
@@ -66,46 +67,16 @@ const advancedStarting: Parser<WeaponCategory> = kl(
 );
 
 function asWeaponCategory(s: string, ptr: [Token[], number]) {
-	switch (s) {
-		case "Arcane":
-		case "ARCANE":
-			return success("arcane" as const)(inc(ptr));
-		case "Bow":
-		case "BOW":
-			return success("bow" as const)(inc(ptr));
-		case "Brawling":
-		case "BRAWLING":
-			return success("brawling" as const)(inc(ptr));
-		case "Dagger":
-		case "DAGGER":
-			return success("dagger" as const)(inc(ptr));
-		case "Firearm":
-		case "FIREARM":
-			return success("firearm" as const)(inc(ptr));
-		case "Flail":
-		case "FLAIL":
-			return success("flail" as const)(inc(ptr));
-		case "Heavy":
-		case "HEAVY":
-			return success("heavy" as const)(inc(ptr));
-		case "Spear":
-		case "SPEAR":
-			return success("spear" as const)(inc(ptr));
-		case "Sword":
-		case "SWORD":
-			return success("sword" as const)(inc(ptr));
-		case "Thrown":
-		case "THROWN":
-			return success("thrown" as const)(inc(ptr));
-		default:
-			return fail<WeaponCategory>(`Unexpected category ${s}`)(ptr);
+	if ((WEAPON_CATEGORIES as readonly string[]).includes(s)) {
+		return success(s as WeaponCategory)(inc(ptr));
 	}
+	return fail<WeaponCategory>(`Unexpected category ${s}`)(ptr);
 }
 
 const categoryTitle: Parser<WeaponCategory> = (ptr) => {
 	const token = nextToken(ptr);
 	if (token && isStringToken(token) && token.string.endsWith(" Category")) {
-		return asWeaponCategory(token.string.slice(0, -9), ptr);
+		return asWeaponCategory(token.string.slice(0, -9).toLowerCase(), ptr);
 	}
 	return fail<WeaponCategory>("Category")(ptr);
 };

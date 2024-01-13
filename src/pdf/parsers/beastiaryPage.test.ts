@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
 import { imageToken, stringToken } from "../arbs/output";
 import { Image, Token } from "../lexers/token";
-import { DieSize, Distance, STATS, TYPE_CODES, flatMap, isResult, prettifyStrings } from "./lib";
+import { DAMAGE_TYPES, DIE_SIZES, Distance, STATS, flatMap, isResult, prettifyStrings, TYPE_CODES } from "./lib";
 import { Beast, beastiary } from "./beastiaryPage";
 
 const beastiaryDataGen = fc.array(
@@ -14,10 +14,10 @@ const beastiaryDataGen = fc.array(
 		description: description(),
 		traits: descriptionEnd(),
 		attributes: fc.record({
-			dex: fc.constantFrom(6, 8, 10, 12) as fc.Arbitrary<DieSize>,
-			ins: fc.constantFrom(6, 8, 10, 12) as fc.Arbitrary<DieSize>,
-			mig: fc.constantFrom(6, 8, 10, 12) as fc.Arbitrary<DieSize>,
-			wlp: fc.constantFrom(6, 8, 10, 12) as fc.Arbitrary<DieSize>,
+			dex: fc.constantFrom(...DIE_SIZES),
+			ins: fc.constantFrom(...DIE_SIZES),
+			mig: fc.constantFrom(...DIE_SIZES),
+			wlp: fc.constantFrom(...DIE_SIZES),
 			maxHp: fc.integer({ min: 5, max: 10000 }),
 			crisis: fc.integer({ min: 5, max: 10000 }),
 			maxMp: fc.integer({ min: 5, max: 10000 }),
@@ -47,7 +47,7 @@ const beastiaryDataGen = fc.array(
 					bonus: fc.nat(),
 				}),
 				damage: fc.integer({ min: 0, max: 100 }),
-				damageType: fc.constantFrom(null, ...TYPE_CODES.map((k) => k[0])),
+				damageType: fc.constantFrom(null, ...DAMAGE_TYPES),
 				description: description(),
 			}),
 			{ minLength: 1, maxLength: 3 },
@@ -115,10 +115,11 @@ test("parses generated", () => {
 					stringToken(`Init. ${b.attributes.init}`),
 					stringToken(`DEF +${b.attributes.def}`),
 					stringToken(`M.DEF +${b.attributes.mdef}`),
-					...flatMap(TYPE_CODES, ([r, k]) => {
-						const resist = b.resists[r];
+					...flatMap(DAMAGE_TYPES, (k) => {
+						const resist = b.resists[k];
 						if (resist != null) {
-							return [stringToken(k), stringToken(k), stringToken(resist)];
+							const tok = stringToken(TYPE_CODES[k]);
+							return [tok, tok, stringToken(resist)];
 						} else {
 							return [stringToken(k)];
 						}

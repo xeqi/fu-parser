@@ -158,40 +158,46 @@ export const matches = (r: RegExp, errorMsg: string) =>
 
 export type Distance = "melee" | "ranged";
 export type Handed = "one-handed" | "two-handed";
-export type WeaponCategory =
-	| "arcane"
-	| "bow"
-	| "brawling"
-	| "dagger"
-	| "firearm"
-	| "flail"
-	| "heavy"
-	| "spear"
-	| "sword"
-	| "thrown";
-
-export const STATS = ["DEX", "MIG", "INS", "WLP"] as const;
-export type Stat = (typeof STATS)[number];
-export const isStat = (s: string): s is Stat => {
-	return s == "DEX" || s == "MIG" || s == "INS" || s == "WLP";
-};
-
-export const TYPE_CODES = [
-	["physical", "'"],
-	["air", "a"],
-	["bolt", "b"],
-	["dark", "a"],
-	["earth", "E"],
-	["fire", "f"],
-	["ice", "i"],
-	["light", "l"],
-	["poison", "b"],
+export type WeaponCategory = (typeof WEAPON_CATEGORIES)[number];
+export const WEAPON_CATEGORIES = [
+	"arcane",
+	"bow",
+	"brawling",
+	"dagger",
+	"firearm",
+	"flail",
+	"heavy",
+	"spear",
+	"sword",
+	"thrown",
 ] as const;
 
-export type DamageType = (typeof TYPE_CODES)[number][0];
+export type Stat = (typeof STATS)[number];
+export const STATS = ["DEX", "MIG", "INS", "WLP"] as const;
+const isStat = (s: string): s is Stat => {
+	return (STATS as readonly string[]).includes(s);
+};
+
+export type TypeCode = (typeof TYPE_CODES)[keyof typeof TYPE_CODES];
+export const TYPE_CODES = {
+	physical: "'",
+	air: "a",
+	bolt: "b",
+	dark: "a",
+	earth: "E",
+	fire: "f",
+	ice: "i",
+	light: "l",
+	poison: "b",
+} as const;
+
+export type DamageType = (typeof DAMAGE_TYPES)[number];
+export const DAMAGE_TYPES = ["physical", "air", "bolt", "dark", "earth", "fire", "ice", "light", "poison"] as const;
+
+export type Affinity = (typeof AFFINITIES)[number];
 export const AFFINITIES = ["VU", "N", "RS", "IM", "AB"] as const;
-export type AFFINITY = (typeof AFFINITIES)[number];
-export type ResistanceMap = { [Property in DamageType]: AFFINITY };
+
+export type ResistanceMap = Record<DamageType, Affinity>;
 export type Accuracy = { primary: Stat; secondary: Stat; bonus: number };
 
 const bonus = alt(
@@ -200,14 +206,14 @@ const bonus = alt(
 	),
 	success(0),
 );
-//TODO: Parse attibutes instead of str and cast
-const statsForAccuracy: Parser<readonly [Stat, Stat]> = (ptr: PTR) => {
+
+const statsForAccuracy: Parser<[Stat, Stat]> = (ptr: PTR) => {
 	const token = nextToken(ptr);
 	if (token && isStringToken(token) && token.string.length == 9) {
 		const primary = token.string.slice(0, 3);
 		const secondary = token.string.slice(-3);
 		if (isStat(primary) && isStat(secondary)) {
-			return success([primary, secondary] as const)(inc(ptr));
+			return success<[Stat, Stat]>([primary, secondary])(inc(ptr));
 		}
 	}
 	return fail<[Stat, Stat]>("Accuracy attributes")(ptr);
@@ -257,7 +263,8 @@ export const cost = fmap(strWithFont([/PTSans-Narrow$/]), convertCosts);
 export const dashOrNumber = (errorMsg: string) =>
 	fmap(matches(/^((\+|-)?[0-9]+)|-$/, errorMsg), (s: string) => (s === "-" ? 0 : Number(s)));
 
-export type DieSize = 6 | 8 | 10 | 12;
+export type DieSize = (typeof DIE_SIZES)[number];
+export const DIE_SIZES = [6, 8, 10, 12] as const;
 
 export const prettifyStrings = (lines: string[]): string => {
 	return lines.reduce((acc, line) => {

@@ -1,36 +1,33 @@
 import { json } from "typia";
-import { Affinities, Attributes, Npc, NpcArmor, Weapon } from "../external/fultimator";
-import { FUActor, FUItem } from "../external/project-fu";
+import { Affinities, Attributes, Elements, Npc, NpcArmor, Weapon } from "../external/fultimator";
+import { ATTR, FUActor, FUItem } from "../external/project-fu";
+import { DamageType } from "../pdf/parsers/lib";
 
-enum AFF_MAPPING {
-	vu = -1,
-	no = 0,
-	rs = 1,
-	im = 2,
-	ab = 3,
-}
+const AFF_MAPPING: Record<Affinities, number> = {
+	vu: -1,
+	no: 0,
+	rs: 1,
+	im: 2,
+	ab: 3,
+};
 
-enum ATTRIBUTE_MAPPING {
-	"dexterity" = "dex",
-	"might" = "mig",
-	"insight" = "ins",
-	"will" = "wlp",
-}
+const STAT_MAPPING: Record<Attributes, ATTR> = {
+	dexterity: "dex",
+	might: "mig",
+	insight: "ins",
+	will: "wlp",
+};
 
-enum ELEMENTS_MAPPING {
-	"physical" = "physical",
-	"wind" = "air",
-	"bolt" = "bolt",
-	"dark" = "dark",
-	"earth" = "earth",
-	"fire" = "fire",
-	"ice" = "ice",
-	"light" = "light",
-	"poison" = "poison",
-}
-
-const convertStat = (s: Attributes) => {
-	return ATTRIBUTE_MAPPING[s];
+const ELEMENTS_MAPPING: Record<Elements, DamageType> = {
+	physical: "physical",
+	wind: "air",
+	bolt: "bolt",
+	dark: "dark",
+	earth: "earth",
+	fire: "fire",
+	ice: "ice",
+	light: "light",
+	poison: "poison",
 };
 
 const lookupAffinity = (affinity?: Affinities) => {
@@ -182,8 +179,8 @@ const importFultimator = async (data: Npc) => {
 				name: attack.name != "" ? attack.name : "Unnamed Attack",
 				system: {
 					attributes: {
-						primary: { value: convertStat(attack.attr1) },
-						secondary: { value: convertStat(attack.attr2) },
+						primary: { value: STAT_MAPPING[attack.attr1] },
+						secondary: { value: STAT_MAPPING[attack.attr2] },
 					},
 					accuracy: {
 						value: Math.floor(data.lvl / 10) + (data.rank == "companion" ? data.lvl || 1 : 0),
@@ -206,8 +203,8 @@ const importFultimator = async (data: Npc) => {
 				name: attack.name != "" ? attack.name : "Unnamed Weapon Attack",
 				system: {
 					attributes: {
-						primary: { value: convertStat(attack.weapon.att1) },
-						secondary: { value: convertStat(attack.weapon.att2) },
+						primary: { value: STAT_MAPPING[attack.weapon.att1] },
+						secondary: { value: STAT_MAPPING[attack.weapon.att2] },
 					},
 					accuracy: {
 						value:
@@ -246,8 +243,8 @@ const importFultimator = async (data: Npc) => {
 						spell.type == "offensive"
 							? {
 									attributes: {
-										primary: { value: convertStat(spell.attr1) },
-										secondary: { value: convertStat(spell.attr2) },
+										primary: { value: STAT_MAPPING[spell.attr1] },
+										secondary: { value: STAT_MAPPING[spell.attr2] },
 									},
 									accuracy: {
 										value:
