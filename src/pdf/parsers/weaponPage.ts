@@ -32,6 +32,7 @@ import {
 	success,
 	inc,
 	WEAPON_CATEGORIES,
+	watermark,
 } from "./lib";
 
 export type Weapon = {
@@ -85,7 +86,7 @@ const weaponsParser = fmap(then(categoryTitle, many1(weaponListingParser)), ([ca
 		return { ...v, category };
 	}),
 );
-const ending = then(alt(then(text("BASIC WEAPONS"), str), str), eof);
+const ending = then(alt(then(text("BASIC WEAPONS"), watermark), watermark), eof);
 
 export const basicWeapons: Parser<Weapon[]> = fmap(kl(kr(starting, many1(weaponsParser)), ending), (k) => k.flat(1));
 export const rareWeapons: Parser<Weapon[]> = kl(
@@ -94,5 +95,5 @@ export const rareWeapons: Parser<Weapon[]> = kl(
 			return { ...v, category };
 		}),
 	),
-	then(str, eof),
+	then(watermark, eof),
 );

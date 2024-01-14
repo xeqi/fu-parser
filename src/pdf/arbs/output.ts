@@ -6,3 +6,5 @@ export const imageToken = (image: Image): ImageToken => {
 export const stringToken = (s: string, f: string = ""): StringToken => {
 	return { kind: "String", string: s, font: f };
 };
+
+export const watermark = stringToken("", "Helvetica");

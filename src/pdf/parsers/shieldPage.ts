@@ -16,6 +16,7 @@ import {
 	starting,
 	str,
 	success,
+	watermark,
 } from "./lib";
 
 export type Shield = {
@@ -42,5 +43,5 @@ const shieldParser: Parser<Shield> = fmap(
 
 export const shieldPage: Parser<Shield[]> = kl(
 	kr(starting, many1(shieldParser)),
-	seq(alt(seq(str, str, many1(image)), success(null)), str, eof),
+	seq(alt(seq(str, str, many1(image)), success(null)), watermark, eof),
 );

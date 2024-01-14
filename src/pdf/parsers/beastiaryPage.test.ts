@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
-import { imageToken, stringToken } from "../arbs/output";
+import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Image, Token } from "../lexers/token";
 import { DAMAGE_TYPES, DIE_SIZES, Distance, STATS, flatMap, isResult, prettifyStrings, TYPE_CODES } from "./lib";
 import { Beast, beastiary } from "./beastiaryPage";
@@ -203,7 +203,7 @@ test("parses generated", () => {
 								]),
 							]),
 				]),
-				stringToken("", "Helvetica"),
+				watermark,
 			];
 			const parses = beastiary([pageTokens, 0]);
 			const expected: Beast[] = cs.map((v) => {

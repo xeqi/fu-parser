@@ -34,6 +34,7 @@ import {
 	DIE_SIZES,
 	DAMAGE_TYPES,
 	TYPE_CODES,
+	watermark,
 } from "./lib";
 
 export type Beast = {
@@ -275,7 +276,7 @@ export const beastiary = kl(
 			),
 			success(null),
 		),
-		strWithFont([/Helvetica$/]),
+		watermark,
 		eof,
 	),
 );

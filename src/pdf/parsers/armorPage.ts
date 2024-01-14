@@ -20,6 +20,7 @@ import {
 	strWithFont,
 	success,
 	then,
+	watermark,
 } from "./lib";
 
 export type Armor = {
@@ -62,4 +63,4 @@ const armorParser: Parser<Armor> = fmap(
 	},
 );
 
-export const armorPage = kl(kr(starting, many1(armorParser)), seq(alt(image, success(null)), str, eof));
+export const armorPage = kl(kr(starting, many1(armorParser)), seq(alt(image, success(null)), watermark, eof));

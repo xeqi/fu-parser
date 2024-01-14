@@ -156,8 +156,10 @@ export const sep = textWithFont("w", [/Wingdings-Regular$/]);
 export const matches = (r: RegExp, errorMsg: string) =>
 	fmap(satisfy((t) => isStringToken(t) && r.test(t.string), errorMsg) as Parser<StringToken>, (t) => t.string);
 
-export type Distance = "melee" | "ranged";
-export type Handed = "one-handed" | "two-handed";
+export type Distance = (typeof DISTANCES)[number];
+export const DISTANCES = ["melee", "ranged"] as const;
+export type Handed = (typeof HANDED)[number];
+export const HANDED = ["one-handed", "two-handed"] as const;
 export type WeaponCategory = (typeof WEAPON_CATEGORIES)[number];
 export const WEAPON_CATEGORIES = [
 	"arcane",
@@ -276,3 +278,5 @@ export const prettifyStrings = (lines: string[]): string => {
 		}
 	}, "");
 };
+
+export const watermark = strWithFont([/Helvetica$/]);

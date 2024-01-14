@@ -1,5 +1,20 @@
 import { Image } from "../lexers/token";
-import { Parser, description, eof, fmap, image, kl, kr, many1, matches, seq, starting, str, then } from "./lib";
+import {
+	Parser,
+	description,
+	eof,
+	fmap,
+	image,
+	kl,
+	kr,
+	many1,
+	matches,
+	seq,
+	starting,
+	str,
+	then,
+	watermark,
+} from "./lib";
 
 export type Consumable = { image: Image; name: string; description: string; ipCost: number };
 
@@ -16,4 +31,4 @@ const consumableParser: Parser<Consumable> = fmap(
 );
 
 const header = matches(/^[^.?!]*$/, "header");
-export const consumablesPage = kl(kr(starting, many1(then(header, many1(consumableParser)))), seq(str, str, eof));
+export const consumablesPage = kl(kr(starting, many1(then(header, many1(consumableParser)))), seq(str, watermark, eof));

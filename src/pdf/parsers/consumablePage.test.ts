@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { cost, multiString, word, description } from "../arbs/arbs";
 import { flatMap, isResult, prettifyStrings } from "./lib";
 import { Image, Token } from "../lexers/token";
-import { imageToken, stringToken } from "../arbs/output";
+import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Consumable, consumablesPage } from "./consumablePage";
 
 const consumableDataGen = fc.array(
@@ -38,7 +38,7 @@ test("parses generated", () => {
 					]),
 				]),
 				stringToken(""),
-				stringToken(""),
+				watermark,
 			];
 			const parses = consumablesPage([pageTokens, 0]);
 			const expected: [string, Consumable[]][] = cs.map(([h, vs]) => [
