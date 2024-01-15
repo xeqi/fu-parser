@@ -74,7 +74,7 @@ const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: read
 		for (const data of weapons) {
 			const saved = await saveImage(data.image, data.name + ".png", imagePath);
 			if (saved && Object.keys(saved).length != 0) {
-				const payload = {
+				const payload: FUItem = {
 					type: "weapon" as const,
 					name: data.name,
 					img: imagePath + "/" + data.name + ".png",
@@ -110,7 +110,7 @@ const saveArmors = async (armors: Armor[], pageNum: number, folderNames: readonl
 	if (folder) {
 		for (const data of armors) {
 			await saveImage(data.image, data.name + ".png", imagePath);
-			const payload = {
+			const payload: FUItem = {
 				type: "armor" as const,
 				name: data.name,
 				img: imagePath + "/" + data.name + ".png",
@@ -142,7 +142,7 @@ const saveAccessories = async (
 		const folder = await getFolder(folderNames, "Item");
 		if (folder) {
 			await saveImage(data.image, data.name + ".png", imagePath);
-			const payload = {
+			const payload: FUItem = {
 				type: "accessory" as const,
 				name: data.name,
 				img: imagePath + "/" + data.name + ".png",
@@ -169,7 +169,7 @@ const saveShields = async (shields: Shield[], pageNum: number, folderNames: read
 	if (folder) {
 		for (const data of shields) {
 			await saveImage(data.image, data.name + ".png", imagePath);
-			const payload = {
+			const payload: FUItem = {
 				type: "shield" as const,
 				name: data.name,
 				img: imagePath + "/" + data.name + ".png",
