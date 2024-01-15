@@ -62,19 +62,3 @@ export const tokenizePDF = async (
 		() => doc.destroy(),
 	];
 };
-
-// case pdfjsLib.OPS.transform: {
-//   parsedData.push(args);
-//   break;
-// }
-
-// case pdfjsLib.OPS.setFillColorN:{
-//   parsedData.push(`setFillDataN: ${args}`)
-//   break;
-// }
-// case pdfjsLib.OPS.setFillRGBColor:{
-//   parsedData.push(`setFillRGBColor: ${args}`)
-//   break;
-// }
-// default:
-//   parsedData.push({unknown: Object.entries(pdfjsLib.OPS).filter(([k,v]) => v === opCode).map(([k,v])=>k)[0]})
