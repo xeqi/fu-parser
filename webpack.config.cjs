@@ -26,6 +26,9 @@ module.exports = {
 		minimizer: [
 			new TerserPlugin({
 				extractComments: /@license/i,
+				terserOptions: {
+					keep_classnames: true,
+				},
 			}),
 		],
 	},
