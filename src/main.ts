@@ -44,9 +44,6 @@
  * SOFTWARE.
  */
 
-import { FultimatorImportApplication } from "./apps/import-fultimator";
-import { ImportPDFApplication } from "./apps/import-pdf";
-
 Hooks.on("renderSettings", async (_app, $html) => {
 	if (game.user.isGM) {
 		const html = $html[0];
@@ -55,7 +52,8 @@ Hooks.on("renderSettings", async (_app, $html) => {
 		const importPDFButton = document.createElement("button");
 		importPDFButton.type = "button";
 		importPDFButton.append("Import PDF");
-		importPDFButton.addEventListener("click", () => {
+		importPDFButton.addEventListener("click", async () => {
+			const { ImportPDFApplication } = await import("./apps/import-pdf");
 			const application = new ImportPDFApplication(
 				{ pdfPath: "", imagePath: "", parseResults: [], inProgress: false },
 				{
@@ -73,7 +71,8 @@ Hooks.on("renderSettings", async (_app, $html) => {
 		const importFultimatorButton = document.createElement("button");
 		importFultimatorButton.type = "button";
 		importFultimatorButton.append("Import Fultimator");
-		importFultimatorButton.addEventListener("click", () => {
+		importFultimatorButton.addEventListener("click", async () => {
+			const { FultimatorImportApplication } = await import("./apps/import-fultimator");
 			const application = new FultimatorImportApplication(
 				{ text: "", inProgress: false },
 				{
