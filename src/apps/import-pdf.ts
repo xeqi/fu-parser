@@ -243,13 +243,26 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 					0,
 				) -
 				(b.attributes.dex + b.attributes.ins) / 2;
+			const calculatedMaxHp = 2 * b.level + 5 * b.attributes.mig;
+
+			const calculatedMaxMp = b.level + 5 * b.attributes.wlp;
 			const payload: FUActor = {
 				system: {
 					description: b.description,
 					level: { value: b.level },
 					resources: {
-						hp: { value: b.attributes.maxHp, max: b.attributes.maxHp, min: 0, bonus: 0 },
-						mp: { value: b.attributes.maxMp, max: b.attributes.maxMp, min: 0, bonus: 0 },
+						hp: {
+							value: b.attributes.maxHp,
+							max: calculatedMaxHp,
+							min: 0,
+							bonus: b.attributes.maxHp - calculatedMaxHp,
+						},
+						mp: {
+							value: b.attributes.maxMp,
+							max: calculatedMaxMp,
+							min: 0,
+							bonus: b.attributes.maxMp - calculatedMaxMp,
+						},
 						ip: { value: 6, max: 6, min: 0 },
 						fp: { value: 3 },
 					},
@@ -309,7 +322,7 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 					derived: {
 						init: { value: b.attributes.init, bonus: initBonus },
 						def: { value: 0, bonus: b.equipment == null ? b.attributes.def : 0 },
-						mdef: { value: 0, bonus: b.equipment == null ? b.attributes.def : 0 },
+						mdef: { value: 0, bonus: b.equipment == null ? b.attributes.mdef : 0 },
 						accuracy: { value: 0, bonus: 0 },
 						magic: { value: 0, bonus: 0 },
 					},
