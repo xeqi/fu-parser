@@ -1,3 +1,4 @@
+import * as pdfjsLib from "pdfjs-dist";
 import { Affinity, Parser, Stat, flatMap, isError, isResult } from "../pdf/parsers/lib";
 import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
 import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
@@ -8,7 +9,6 @@ import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
 import { StringToken } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
-import * as pdfjsLib from "pdfjs-dist";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
