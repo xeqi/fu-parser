@@ -44,6 +44,7 @@ Currently the following are unsupported:
 3. Notes
 
 ### Instructions 
+![FultimatorImporter](https://github.com/xeqi/fu-parser/assets/16845165/a088ea2f-6dca-4276-8468-3923b3c33afb)
 1. Go to the Game Settings menu and there will be a "FU Importer" heading with an "Import Fultimator" button.
 2. Paste the contents of the json export file from Fultimator
 3. Review any error information provided.
