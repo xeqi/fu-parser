@@ -119,7 +119,7 @@ export type Npc = {
 	attributes: NpcAttributes;
 	species: string;
 	villain?: "" | "supreme" | "minor" | "major";
-	rank?: "soldier" | "elite" | "champion2" | "champion3" | "champion4" | "champion5" | "companion";
+	rank?: "soldier" | "elite" | "champion1" |"champion2" | "champion3" | "champion4" | "champion5" | "champion6" | "companion";
 	traits?: string;
 	actions?: NpcAction[];
 	extra?: NpcExtra;
