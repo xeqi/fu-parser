@@ -58,7 +58,6 @@ export type NpcSpell = {
 	target?: string;
 	duration?: string;
 	name: string;
-	range: string;
 	type: string | null;
 	attr1: Attributes;
 	attr2: Attributes;
