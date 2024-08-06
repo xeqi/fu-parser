@@ -109,8 +109,9 @@ export type NpcNotes = {
 };
 
 export type Npc = {
-	id: string;
+	id: string | number;
 	uid: string;
+	imgurl: string;
 	name: string;
 	lvl: number;
 	attacks: NpcAttack[];
@@ -118,7 +119,16 @@ export type Npc = {
 	attributes: NpcAttributes;
 	species: string;
 	villain?: "" | "supreme" | "minor" | "major";
-	rank?: "soldier" | "elite" | "champion1" |"champion2" | "champion3" | "champion4" | "champion5" | "champion6" | "companion";
+	rank?:
+		| "soldier"
+		| "elite"
+		| "champion1"
+		| "champion2"
+		| "champion3"
+		| "champion4"
+		| "champion5"
+		| "champion6"
+		| "companion";
 	traits?: string;
 	actions?: NpcAction[];
 	extra?: NpcExtra;

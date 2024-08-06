@@ -35,6 +35,7 @@ const lookupAffinity = (affinity?: Affinities) => {
 };
 
 const importFultimator = async (data: Npc) => {
+	typeof data.id === "number" ? data.id.toString() : data.id;
 	let mainHandFree = true;
 	let offHandFree = true;
 	const equipment = [data.armor, data.shield, ...(data.weaponattacks?.map((e) => e.weapon) || [])]
