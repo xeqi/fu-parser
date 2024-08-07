@@ -36,6 +36,7 @@ const lookupAffinity = (affinity?: Affinities) => {
 
 const importFultimator = async (data: Npc) => {
 	typeof data.id === "number" ? data.id.toString() : data.id;
+	const phases = typeof data.phases === "string" ? Number(data.phases) : data.phases;
 	let mainHandFree = true;
 	let offHandFree = true;
 	const equipment = [data.armor, data.shield, ...(data.weaponattacks?.map((e) => e.weapon) || [])]
@@ -161,7 +162,9 @@ const importFultimator = async (data: Npc) => {
 			traits: { value: data.traits || "" },
 			species: { value: data.species.toLowerCase() },
 			useEquipment: { value: equipment.length != 0 },
-			villian: { value: data.villain || "" },
+			villain: { value: data.villain || "" },
+			phases: { value: phases || 0 },
+			multipart: { value: data.multipart || "" },
 			isElite: { value: data.rank == "elite" },
 			isChampion: { value: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1 },
 			isCompanion: { value: data.rank == "companion" },
@@ -184,10 +187,16 @@ const importFultimator = async (data: Npc) => {
 						secondary: { value: STAT_MAPPING[attack.attr2] },
 					},
 					accuracy: {
-						value: Math.floor(data.lvl / 10) + (data.rank == "companion" ? data.lvl || 1 : 0),
+						value:
+							Math.floor(data.lvl / 10) +
+							(data.rank == "companion" ? data.lvl || 1 : 0) +
+							(attack.flathit ? Number(attack.flathit) : 0),
 					},
 					damage: {
-						value: Math.floor(data.lvl / 20) * 5 + 5 + (attack.extraDamage ? 5 : 0),
+						value:
+							Math.floor(data.lvl / 20) * 5 +
+							(data.rank == "companion" ? data.lvl || 1 : 0) +
+							(attack.flatdmg ? Number(attack.flatdmg) : 0),
 					},
 					type: { value: attack.range == "distance" ? "ranged" : "melee" },
 					damageType: { value: ELEMENTS_MAPPING[attack.type] },
@@ -222,7 +231,7 @@ const importFultimator = async (data: Npc) => {
 							(attack.flatdmg ? Number(attack.flatdmg) : 0),
 					},
 					type: { value: attack.weapon.range == "distance" ? "ranged" : "melee" },
-					damageType: { value: ELEMENTS_MAPPING[attack.weapon.type] },
+					damageType: { value: ELEMENTS_MAPPING[attack.type] },
 					description: "",
 					isBehavior: false,
 					weight: { value: 1 },
@@ -288,6 +297,18 @@ const importFultimator = async (data: Npc) => {
 		...(data.raregear || []).map((sr): FUItem => {
 			return {
 				name: sr.name != "" ? sr.name : "Unnamed Rare Gear",
+				system: {
+					description: sr.effect,
+					isBehavior: false,
+					weight: { value: 1 },
+					hasClock: { value: false },
+				},
+				type: "rule" as const,
+			};
+		}),
+		...(data.notes || []).map((sr): FUItem => {
+			return {
+				name: sr.name != "" ? sr.name : "Unnamed Note",
 				system: {
 					description: sr.effect,
 					isBehavior: false,

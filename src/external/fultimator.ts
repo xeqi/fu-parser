@@ -42,15 +42,18 @@ export type NpcAttack = {
 	type: Elements;
 	special: string[];
 	extraDamage?: boolean;
+	flatdmg?: string | number;
+	flathit?: string | number;
 };
 
 export type NpcWeaponAttack = {
 	extraDamage?: boolean;
 	weapon: Weapon;
 	name: string;
+	type: Elements;
 	special: string[];
-	flathit?: string;
-	flatdmg?: string;
+	flathit?: string | number;
+	flatdmg?: string | number;
 };
 
 export type NpcSpell = {
@@ -119,6 +122,8 @@ export type Npc = {
 	attributes: NpcAttributes;
 	species: string;
 	villain?: "" | "supreme" | "minor" | "major";
+	phases?: number | string;
+	multipart?: string;
 	rank?:
 		| "soldier"
 		| "elite"

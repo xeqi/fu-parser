@@ -283,7 +283,9 @@ export type FUActor = Actor & {
 		};
 		traits: { value: string };
 		species: { value: string };
-		villian: { value: "" | "supreme" | "minor" | "major" };
+		villain: { value: "" | "supreme" | "minor" | "major" };
+		phases?: { value: number };
+		multipart?: { value: string };
 		isElite: { value: boolean };
 		isChampion: { value: number };
 		isCompanion: { value: boolean };

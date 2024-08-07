@@ -330,7 +330,7 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 					species: { value: b.type.toLowerCase() },
 					useEquipment: { value: b.equipment != null },
 					source: { value: pageNum - 2 },
-					villian: { value: "" as const },
+					villain: { value: "" as const },
 					isElite: { value: false as const },
 					isChampion: { value: 1 as const },
 					isCompanion: { value: false as const },
