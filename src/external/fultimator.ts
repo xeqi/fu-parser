@@ -50,7 +50,7 @@ export type NpcWeaponAttack = {
 	extraDamage?: boolean;
 	weapon: Weapon;
 	name: string;
-	type: Elements;
+	type?: Elements;
 	special: string[];
 	flathit?: string | number;
 	flatdmg?: string | number;
@@ -114,7 +114,7 @@ export type NpcNotes = {
 export type Npc = {
 	id: string | number;
 	uid: string;
-	imgurl: string;
+	imgurl?: string;
 	name: string;
 	lvl: number;
 	attacks: NpcAttack[];

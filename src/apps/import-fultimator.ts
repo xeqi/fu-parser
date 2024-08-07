@@ -208,6 +208,7 @@ const importFultimator = async (data: Npc) => {
 			};
 		}),
 		...(data.weaponattacks || []).map((attack): FUItem => {
+			const type = attack.type ?? attack.weapon.type ?? "physical";
 			return {
 				type: "basic" as const,
 				name: attack.name != "" ? attack.name : "Unnamed Weapon Attack",
@@ -231,7 +232,7 @@ const importFultimator = async (data: Npc) => {
 							(attack.flatdmg ? Number(attack.flatdmg) : 0),
 					},
 					type: { value: attack.weapon.range == "distance" ? "ranged" : "melee" },
-					damageType: { value: ELEMENTS_MAPPING[attack.type] },
+					damageType: { value: ELEMENTS_MAPPING[type] },
 					description: "",
 					isBehavior: false,
 					weight: { value: 1 },
