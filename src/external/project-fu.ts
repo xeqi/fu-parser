@@ -44,6 +44,7 @@ declare global {
 type Folder = {
 	_id: string;
 	name: string;
+	type: string;
 	getSubfolders(): Collection<Folder>;
 };
 
@@ -82,7 +83,8 @@ export const getFolder = async (folders: readonly string[], type: string) => {
 				(await Folder.create({ name: folderName, type, folder: folder._id }));
 		} else {
 			folder =
-				game.folders.find((f) => f.name === folderName) || (await Folder.create({ name: folderName, type }));
+				game.folders.find((f) => f.name === folderName && f.type == type) ||
+				(await Folder.create({ name: folderName, type }));
 		}
 	}
 	return folder;
