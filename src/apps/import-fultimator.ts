@@ -195,6 +195,8 @@ const importFultimator = async (data: Npc) => {
 					damage: {
 						value:
 							Math.floor(data.lvl / 20) * 5 +
+							5 +
+							(attack.extraDamage ? 5 : 0) +
 							(data.rank == "companion" ? data.lvl || 1 : 0) +
 							(attack.flatdmg ? Number(attack.flatdmg) : 0),
 					},
