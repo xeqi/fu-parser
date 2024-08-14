@@ -1,7 +1,18 @@
 <form>
     <div style="display:flex; flex-direction: column; height: 100%">
+        <div class="form-group">
+            <label>Data Type</label>
+            <div id="dataType" style="font-weight: bold; text-transform: uppercase;">
+                {{#if dataType}}
+                    {{dataType}}
+                {{else}}
+                    No Data
+                {{/if}}
+            </div>
+            <p class="notes">The type of content that will be imported.</p>
+        </div>
         <div style="flex: 1 1">
-            <textarea name="text" placeholder="Your Fultimator import string"style="height:100%; resize: none">{{text}}</textarea>
+            <textarea name="text" placeholder="Your Fultimator import string" style="height:100%; resize: none">{{text}}</textarea>
         </div>
         {{#if error}}
         <div style="flex: 0 0; color: red">

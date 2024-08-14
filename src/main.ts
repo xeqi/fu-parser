@@ -75,7 +75,7 @@ Hooks.on("renderSettings", async (_app, $html) => {
 		importFultimatorButton.append("Import Fultimator");
 		importFultimatorButton.addEventListener("click", () => {
 			const application = new FultimatorImportApplication(
-				{ text: "", inProgress: false },
+				{ text: "", dataType: undefined, inProgress: false },
 				{
 					width: 450,
 					height: 600,

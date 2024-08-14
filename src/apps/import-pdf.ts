@@ -267,7 +267,7 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 						fp: { value: 3 },
 					},
 					affinities: {
-						phys: {
+						physical: {
 							base: AFF_MAPPING[b.resists.physical],
 							current: AFF_MAPPING[b.resists.physical],
 							bonus: 0 as const,
