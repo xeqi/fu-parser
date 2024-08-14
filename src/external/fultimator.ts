@@ -193,6 +193,7 @@ export type Player = {
 	accessories?: PCAccessory[];
 	notes?: PCNotes[];
 	modifiers: PCModifiers;
+	quirk?: PCQuirk;
 };
 
 export type PCInfo = {
@@ -389,4 +390,10 @@ export type PCModifiers = {
 	meleePrec: number;
 	rangedPrec: number;
 	mp: number;
+};
+
+export type PCQuirk = {
+	effect: string;
+	name: string;
+	description: string;
 };

@@ -422,6 +422,15 @@ const importFultimatorPC = async (data: Player) => {
 		};
 	});
 
+	const quirkItems: FUItem[] = (Array.isArray(data.quirk) ? data.quirk : []).map((quirk) => ({
+		type: "optionalFeature" as const,
+		name: quirk.name !== "" ? quirk.name : "Unnamed quirk",
+		system: {
+			optionalType: "projectfu.quirk",
+			data: { description: (quirk.description || "") + "<br>" + (quirk.effect || "") },
+		},
+	}));
+
 	// Create the actor and add items
 	const actor = await Actor.create(payload);
 	await actor.createEmbeddedDocuments("Item", [
@@ -434,6 +443,7 @@ const importFultimatorPC = async (data: Player) => {
 		...heroicItems,
 		...spellItems,
 		...noteItems,
+		...quirkItems,
 	]);
 
 	await actor.update({

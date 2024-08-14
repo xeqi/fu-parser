@@ -316,6 +316,15 @@ export type FUItem = Item &
 				type: "rule";
 				system: Base & HasBehavior & HasProgress;
 		  }
+		| {
+				type: "optionalFeature";
+				system: {
+					optionalType: string;
+					data: {
+						description: string;
+					};
+				};
+		  }
 	);
 
 export type FUActor = Actor & {
