@@ -119,6 +119,18 @@ export const saveImage = async (
 };
 
 export type ATTR = "mig" | "wlp" | "dex" | "ins";
+export type CATEGORY =
+	| "arcane"
+	| "bow"
+	| "flail"
+	| "firearm"
+	| "spear"
+	| "thrown"
+	| "heavy"
+	| "dagger"
+	| "brawling"
+	| "sword";
+
 type DamageType = "physical" | "air" | "bolt" | "dark" | "earth" | "fire" | "ice" | "light" | "poison";
 
 type Base = {
@@ -148,9 +160,7 @@ type Weaponize = {
 	accuracy: { value: number };
 	damage: { value: number };
 	type: { value: "melee" | "ranged" };
-	category: {
-		value: "arcane" | "bow" | "brawling" | "dagger" | "firearm" | "flail" | "heavy" | "spear" | "sword" | "thrown";
-	};
+	category: { value: CATEGORY };
 	hands: { value: "one-handed" | "two-handed" };
 	damageType: { value: DamageType };
 };
@@ -186,8 +196,56 @@ type HasProgress = {
 	progress?: { current: number; step: number; max: number };
 };
 
+type Bonds = {
+	name: string;
+	admInf: string;
+	loyMis: string;
+	affHat: string;
+	strength: number;
+};
+
 export type FUItem = Item &
 	(
+		| {
+				type: "heroic";
+				system: Base & {
+					subtype: { value: string };
+					class: { value: string };
+				};
+		  }
+		| {
+				type: "skill";
+				system: Base & {
+					level: { value: number; max: number };
+				};
+		  }
+		| {
+				type: "class";
+				system: Base & {
+					level: { value: number };
+					benefits: {
+						resources: {
+							hp: { value: number };
+							mp: { value: number };
+							ip: { value: number };
+						};
+						martials: {
+							melee: { value: boolean };
+							ranged: { value: boolean };
+							armor: { value: boolean };
+							shields: { value: boolean };
+						};
+						rituals: {
+							arcanism: { value?: boolean };
+							chimerism: { value?: boolean };
+							elementalism: { value?: boolean };
+							entropism: { value?: boolean };
+							ritualism: { value: boolean };
+							spiritism: { value?: boolean };
+						};
+					};
+				};
+		  }
 		| {
 				type: "weapon";
 				system: Base &
@@ -230,6 +288,20 @@ export type FUItem = Item &
 					RollInfo &
 					HasBehavior & {
 						mpCost: { value: string };
+						maxTargets?: { value: string };
+						target: { value: string };
+						duration: { value: string };
+						isOffensive: { value: boolean };
+						quality: { value: string };
+					};
+		  }
+		| {
+				type: "pcSpell";
+				system: Base &
+					RollInfo &
+					HasBehavior & {
+						mpCost: { value: string };
+						maxTargets?: { value: string };
 						target: { value: string };
 						duration: { value: string };
 						isOffensive: { value: boolean };
@@ -244,6 +316,15 @@ export type FUItem = Item &
 				type: "rule";
 				system: Base & HasBehavior & HasProgress;
 		  }
+		| {
+				type: "optionalFeature";
+				system: {
+					optionalType: string;
+					data: {
+						description: string;
+					};
+				};
+		  }
 	);
 
 export type FUActor = Actor & {
@@ -255,7 +336,7 @@ export type FUActor = Actor & {
 			mp: { value: number; min: number; max: number; bonus: number };
 		};
 		affinities: {
-			phys: { base: number; current: number; bonus: 0 };
+			physical: { base: number; current: number; bonus: 0 };
 			air: { base: number; current: number; bonus: 0 };
 			bolt: { base: number; current: number; bonus: 0 };
 			dark: { base: number; current: number; bonus: 0 };
@@ -294,5 +375,64 @@ export type FUActor = Actor & {
 		useEquipment: { value: boolean };
 		study: { value: 0 };
 		source?: { value: number };
+	};
+};
+
+export type FUActorPC = Actor & {
+	type: "character";
+	system: Base & {
+		level: { value: number };
+		resources: {
+			hp: { value: number; min: number; max: number; bonus: number };
+			mp: { value: number; min: number; max: number; bonus: number };
+		};
+		affinities: {
+			physical: { base: number; current: number; bonus: 0 };
+			air: { base: number; current: number; bonus: 0 };
+			bolt: { base: number; current: number; bonus: 0 };
+			dark: { base: number; current: number; bonus: 0 };
+			earth: { base: number; current: number; bonus: 0 };
+			fire: { base: number; current: number; bonus: 0 };
+			ice: { base: number; current: number; bonus: 0 };
+			light: { base: number; current: number; bonus: 0 };
+			poison: { base: number; current: number; bonus: 0 };
+		};
+		attributes: {
+			dex: { base: number; current: number; bonus: 0 };
+			ins: { base: number; current: number; bonus: 0 };
+			mig: { base: number; current: number; bonus: 0 };
+			wlp: { base: number; current: number; bonus: 0 };
+		};
+		derived: {
+			init: { value: number; bonus: number };
+			def: { value: number; bonus: number };
+			mdef: { value: number; bonus: number };
+		};
+		bonuses: {
+			accuracy: {
+				accuracyCheck: number;
+				accuracyMelee: number;
+				accuracyRanged: number;
+				magicCheck: number;
+			};
+			damage: {
+				melee: number;
+				ranged: number;
+				spell: number;
+			};
+		};
+	} & {
+		resources: {
+			ip: { value: number; min: number; max: number; bonus: number };
+			fp: { value: number };
+			zenit: { value: number };
+			bonds: Bonds[];
+			exp: { value: number };
+			identity: { name: string };
+			pronouns: { name: string };
+			theme: { name: string };
+			origin: { name: string };
+			source?: { value: number };
+		};
 	};
 };
