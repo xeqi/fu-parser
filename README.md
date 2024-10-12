@@ -69,7 +69,9 @@ For PDF parsing this module uses [PDF.js](https://mozilla.github.io/pdf.js/) to 
 1. Clone the repo to a local machine.
 2. Run `npm install` to install the local dependencies
 3. Run `npm run build` to create a `dist` folder containing packed js files
-4. Install the contents of `dist` into a `modules/fu-parser` directory in your Foundry instance.  For example for a local linux distribution run `ln -sr dist/ ~/.local/share/FoundryVTT/Data/modules/fu-parser`
+4. Install the contents of `dist` into a `modules/fu-parser` directory in your Foundry instance.
+    - For local linux distribution run `ln -sr dist/ ~/.local/share/FoundryVTT/Data/modules/fu-parser`
+    - For windows users run `mklink /D "C:\Users\<YourUsername>\AppData\Local\FoundryVTT\Data\modules\fu-parser" "C:\path\to\dist"`
 
 ### Testing
 
