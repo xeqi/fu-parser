@@ -13,16 +13,50 @@ export type WeaponCategory =
 	| "Sword";
 
 export type Weapon = {
+	name: string;
 	cost: number;
-	category: string;
+	category: WeaponCategory;
 	prec: number;
 	att1: Attributes;
 	att2: Attributes;
-	name: string;
-	range: "melee" | "distance";
+	martial: boolean;
+	range?: "melee" | "distance";
+	melee?: boolean;
+	ranged?: boolean;
 	hands: number;
 	damage: number;
 	type: Elements;
+	quality: string;
+};
+
+export type PCWeapon = {
+	name: string;
+	category: WeaponCategory;
+	cost: number;
+	prec: number;
+	att1: Attributes;
+	att2: Attributes;
+	martial: boolean;
+	range?: "melee" | "distance";
+	melee?: boolean;
+	ranged?: boolean;
+	hands: number;
+	damage: number;
+	type: Elements;
+	quality: string;
+};
+
+export type PCShield = {
+	name: string;
+	cost: number;
+	def: number;
+	mdef: number;
+	init: number;
+	defModifier?: number;
+	mDefModifier?: number;
+	initModifier?: number;
+	martial: boolean;
+	quality: string;
 };
 
 export type Affinities = "rs" | "vu" | "ab" | "im" | "no";
@@ -325,9 +359,9 @@ export type PCArmor = {
 	def: number;
 	mdef: number;
 	init: number;
-	defModifier: number;
-	mDefModifier: number;
-	initModifier: number;
+	defModifier?: number;
+	mDefModifier?: number;
+	initModifier?: number;
 	quality: string;
 	cost: number;
 	martial: boolean;
@@ -339,9 +373,9 @@ export type PCArmor = {
 
 export type PCAccessory = {
 	name: string;
-	defModifier: number;
-	mDefModifier: number;
-	initModifier: number;
+	defModifier?: number;
+	mDefModifier?: number;
+	initModifier?: number;
 	quality: string;
 	cost: number;
 	precModifier?: number;

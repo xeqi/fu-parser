@@ -1,6 +1,6 @@
 {
     "id": "fu-parser",
-    "title": "Fabula Ultima pdf parser",
+    "title": "Fabula Ultima PDF Parser",
     "description": "Parse the Fabula Ultima pdf for importing.",
     "authors": [
       {
@@ -10,7 +10,7 @@
     "version": "#{VERSION}#",
     "compatibility": {
       "minimum": "10",
-      "verified": "11"
+      "verified": "13"
     },
     "relationships":{
       "systems":[{

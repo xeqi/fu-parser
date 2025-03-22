@@ -141,8 +141,8 @@ type SystemItem = {
 	cost: { value: number };
 };
 type Defensive = {
-	def: { value: number };
-	mdef: { value: number };
+	def: { value: number; attribute?: ATTR };
+	mdef: { value: number; attribute?: ATTR };
 	init: { value: number };
 };
 

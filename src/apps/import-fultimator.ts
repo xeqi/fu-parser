@@ -9,9 +9,14 @@ import {
 	Player,
 	PCBond,
 	WeaponCategory,
+	PCWeapon,
+	PCShield,
+	PCArmor,
+	PCAccessory,
 } from "../external/fultimator";
 import { ATTR, CATEGORY, FUActor, FUItem, FUActorPC } from "../external/project-fu";
 import { DamageType } from "../pdf/parsers/lib";
+// import { Accessory } from "../pdf/parsers/accessoryPage";
 
 interface BondInput {
 	name: string;
@@ -63,6 +68,107 @@ const ELEMENTS_MAPPING: Record<Elements, DamageType> = {
 
 const lookupAffinity = (affinity?: Affinities) => {
 	return affinity ? AFF_MAPPING[affinity] : 0;
+};
+
+const importFultimatorWeapon = async (data: PCWeapon) => {
+	const type = data.type;
+	const category = data.category;
+	const isRanged = data.ranged;
+	const payload: FUItem = {
+		type: "weapon" as const,
+		name: data.name !== "" ? data.name : "Unnamed data",
+		system: {
+			attributes: {
+				primary: { value: STAT_MAPPING[data.att1] },
+				secondary: { value: STAT_MAPPING[data.att2] },
+			},
+			accuracy: { value: data.prec },
+			damage: { value: data.damage },
+			type: { value: isRanged ? "ranged" : "melee" },
+			damageType: { value: ELEMENTS_MAPPING[type] },
+			description: "",
+			isBehavior: false,
+			cost: { value: data.cost },
+			weight: { value: 1 },
+			quality: { value: data.quality },
+			isMartial: { value: data.martial },
+			category: { value: CATEGORY_MAPPING[category] },
+			hands: { value: data.hands === 1 ? "one-handed" : "two-handed" },
+			isCustomWeapon: { value: false },
+		},
+	};
+	const item = await Item.create(payload);
+	console.log("Item created:", item);
+};
+
+const importFultimatorShield = async (data: PCShield) => {
+	const defMod = data.defModifier ?? 0;
+	const mDefMod = data.mDefModifier ?? 0;
+	const initMod = data.initModifier ?? 0;
+	const payload: FUItem = {
+		type: "shield" as const,
+		name: data.name !== "" ? data.name : "Unnamed data",
+		system: {
+			description: "",
+			cost: { value: data.cost },
+			isMartial: { value: data.martial },
+			quality: { value: data.quality },
+			isEquipped: { value: false, slot: "" },
+			def: { value: data.def + defMod },
+			mdef: { value: data.mdef + mDefMod },
+			init: { value: data.init + initMod },
+			isBehavior: false,
+			weight: { value: 1 },
+		},
+	};
+	const item = await Item.create(payload);
+	console.log("Item created:", item);
+};
+
+const importFultimatorArmor = async (data: PCArmor) => {
+	const defMod = data.defModifier ?? 0;
+	const mDefMod = data.mDefModifier ?? 0;
+	const initMod = data.initModifier ?? 0;
+	const payload: FUItem = {
+		type: "armor" as const,
+		name: data.name !== "" ? data.name : "Unnamed Armor",
+		system: {
+			def: { value: data.def + defMod, attribute: "dex" },
+			mdef: { value: data.mdef + mDefMod, attribute: "ins" },
+			init: { value: data.init + initMod },
+			description: "",
+			isBehavior: false,
+			cost: { value: data.cost },
+			weight: { value: 1 },
+			quality: { value: data.quality },
+			isMartial: { value: data.martial },
+		},
+	};
+	const item = await Item.create(payload);
+	console.log("Armor item created:", item);
+};
+
+const importFultimatorAccessory = async (data: PCAccessory) => {
+	const defMod = data.defModifier ?? 0;
+	const mDefMod = data.mDefModifier ?? 0;
+	const initMod = data.initModifier ?? 0;
+	const payload: FUItem = {
+		type: "shield" as const,
+		name: data.name !== "" ? data.name : "Unnamed data",
+		system: {
+			def: { value: defMod | 0 },
+			mdef: { value: mDefMod | 0 },
+			init: { value: initMod | 0 },
+			description: "",
+			isBehavior: false,
+			cost: { value: data.cost },
+			weight: { value: 1 },
+			quality: { value: data.quality },
+			isMartial: { value: false },
+		},
+	};
+	const item = await Item.create(payload);
+	console.log("Item created:", item);
 };
 
 const importFultimatorPC = async (data: Player) => {
@@ -369,13 +475,16 @@ const importFultimatorPC = async (data: Player) => {
 	});
 
 	const armorItems = (data.armor || []).map((armor): FUItem => {
+		const defMod = armor.defModifier ?? 0;
+		const mDefMod = armor.mDefModifier ?? 0;
+		const initMod = armor.initModifier ?? 0;
 		return {
 			type: "armor" as const,
 			name: armor.name !== "" ? armor.name : "Unnamed Armor",
 			system: {
-				def: { value: armor.def + armor.defModifier },
-				mdef: { value: armor.mdef + armor.mDefModifier },
-				init: { value: armor.init + armor.initModifier },
+				def: { value: armor.def + defMod },
+				mdef: { value: armor.mdef + mDefMod },
+				init: { value: armor.init + initMod },
 				description: "",
 				isBehavior: false,
 				cost: { value: armor.cost },
@@ -387,13 +496,16 @@ const importFultimatorPC = async (data: Player) => {
 	});
 
 	const shieldItems = (data.shields || []).map((shield): FUItem => {
+		const defMod = shield.defModifier ?? 0;
+		const mDefMod = shield.mDefModifier ?? 0;
+		const initMod = shield.initModifier ?? 0;
 		return {
 			type: "shield" as const,
 			name: shield.name !== "" ? shield.name : "Unnamed Shield",
 			system: {
-				def: { value: shield.def + shield.defModifier },
-				mdef: { value: shield.mdef + shield.mDefModifier },
-				init: { value: shield.init + shield.initModifier },
+				def: { value: shield.def + defMod },
+				mdef: { value: shield.mdef + mDefMod },
+				init: { value: shield.init + initMod },
 				description: "",
 				isBehavior: false,
 				cost: { value: shield.cost },
@@ -405,13 +517,16 @@ const importFultimatorPC = async (data: Player) => {
 	});
 
 	const accessoryItems = (data.accessories || []).map((accessory): FUItem => {
+		const defMod = accessory.defModifier ?? 0;
+		const mDefMod = accessory.mDefModifier ?? 0;
+		const initMod = accessory.initModifier ?? 0;
 		return {
 			type: "accessory" as const,
 			name: accessory.name !== "" ? accessory.name : "Unnamed accessory",
 			system: {
-				def: { value: accessory.defModifier },
-				mdef: { value: accessory.mDefModifier },
-				init: { value: accessory.initModifier },
+				def: { value: defMod },
+				mdef: { value: mDefMod },
+				init: { value: initMod },
 				description: "",
 				isBehavior: false,
 				cost: { value: accessory.cost },
@@ -768,10 +883,10 @@ enum DataType {
 	Npc = "npc",
 	Pc = "pc",
 	Class = "class",
-	Weapon = "weapon",
-	Armor = "armor",
-	Shield = "shield",
-	Accessory = "accessory",
+	PCWeapon = "weapon",
+	PCArmor = "armor",
+	PCShield = "shield",
+	PCAccessory = "accessory",
 	Arcana = "arcana",
 }
 
@@ -780,7 +895,7 @@ type FultimatorSubmissionData = {
 };
 
 type FultimatorImportData = FultimatorSubmissionData & {
-	parse?: Npc | Player;
+	parse?: Npc | Player | PCWeapon | PCShield | PCArmor | PCAccessory;
 	error?: string;
 	inProgress: boolean;
 	dataType?: DataType;
@@ -803,6 +918,18 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 					case DataType.Pc:
 						this.object.parse = json.assertParse<Player>(this.object.text);
 						break;
+					case DataType.PCWeapon:
+						this.object.parse = json.assertParse<PCWeapon>(this.object.text);
+						break;
+					case DataType.PCShield:
+						this.object.parse = json.assertParse<PCShield>(this.object.text);
+						break;
+					case DataType.PCArmor:
+						this.object.parse = json.assertParse<PCArmor>(this.object.text);
+						break;
+					case DataType.PCAccessory:
+						this.object.parse = json.assertParse<PCAccessory>(this.object.text);
+						break;
 				}
 			} catch (e) {
 				this.object.error = e instanceof Error ? e.message : String(e);
@@ -814,6 +941,10 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 	detectDataType(text: string): DataType | undefined {
 		if (/"dataType"\s*:\s*"npc"/i.test(text)) return DataType.Npc;
 		if (/"dataType"\s*:\s*"pc"/i.test(text)) return DataType.Pc;
+		if (/"dataType"\s*:\s*"weapon"/i.test(text)) return DataType.PCWeapon;
+		if (/"dataType"\s*:\s*"shield"/i.test(text)) return DataType.PCShield;
+		if (/"dataType"\s*:\s*"armor"/i.test(text)) return DataType.PCArmor;
+		if (/"dataType"\s*:\s*"accessory"/i.test(text)) return DataType.PCAccessory;
 		return undefined;
 	}
 
@@ -844,6 +975,18 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 							break;
 						case DataType.Pc:
 							await importFultimatorPC(this.object.parse as Player);
+							break;
+						case DataType.PCWeapon:
+							await importFultimatorWeapon(this.object.parse as PCWeapon);
+							break;
+						case DataType.PCShield:
+							await importFultimatorShield(this.object.parse as PCShield);
+							break;
+						case DataType.PCArmor:
+							await importFultimatorArmor(this.object.parse as PCArmor);
+							break;
+						case DataType.PCAccessory:
+							await importFultimatorAccessory(this.object.parse as PCAccessory);
 							break;
 					}
 				}
