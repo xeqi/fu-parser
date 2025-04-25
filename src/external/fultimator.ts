@@ -300,7 +300,11 @@ type SpellClass =
 	| "arcanist-rework"
 	| "tinkerer-alchemy"
 	| "tinkerer-infusion"
-	| "tinkerer-magitech";
+	| "tinkerer-magitech"
+	| "gamble"
+	| "magichant"
+	| "symbol"
+	| "dance";
 
 export type PCSkills = {
 	skillName: string;
