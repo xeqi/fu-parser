@@ -70,6 +70,8 @@ const lookupAffinity = (affinity?: Affinities) => {
 	return affinity ? AFF_MAPPING[affinity] : 0;
 };
 
+const getName = (name?: string, fallback = "Unnamed") => name?.trim() || fallback;
+
 const importFultimatorWeapon = async (data: PCWeapon) => {
 	const type = data.type;
 	const category = data.category;
@@ -171,7 +173,7 @@ const importFultimatorAccessory = async (data: PCAccessory) => {
 	console.log("Item created:", item);
 };
 
-const importFultimatorPC = async (data: Player) => {
+const importFultimatorPC = async (data: Player, preferCompendium: boolean = true) => {
 	typeof data.id === "number" ? data.id.toString() : data.id;
 
 	const transformBondData = (bonds: PCBond[]): BondInput[] => {
@@ -314,126 +316,197 @@ const importFultimatorPC = async (data: Player) => {
 		name: data.name != "" ? data.name : "Unnamed NPC",
 	};
 
-	// Extracted constants for mapped items
-	const classItems = (data.classes || []).map((cls): FUItem => {
-		return {
-			name: cls.name !== "" ? cls.name : "Unnamed Class",
-			system: {
-				level: { value: cls.lvl },
-				benefits: {
-					resources: {
-						hp: { value: cls.benefits.hpplus },
-						mp: { value: cls.benefits.mpplus },
-						ip: { value: cls.benefits.ipplus },
+	const classItems = await Promise.all(
+		(data.classes || []).map(async (cls): Promise<FUItem> => {
+			const className = getName(cls.name, "Unnamed Class");
+			if (preferCompendium) {
+				const compendium = game.packs.get("projectfu.classes");
+				if (compendium) {
+					const entry = await compendium.getIndex({ fields: ["name"] });
+					const match = entry.find((e: { name: unknown }) => e.name === className);
+					if (match) {
+						const doc = await compendium.getDocument(match._id);
+						const item = doc.toObject();
+						item.system.level.value = cls.lvl; // Preserve level
+						return item as FUItem;
+					}
+				}
+			}
+			// Fallback if not found in compendium
+			return {
+				name: className,
+				system: {
+					level: { value: cls.lvl },
+					benefits: {
+						resources: {
+							hp: { value: cls.benefits.hpplus },
+							mp: { value: cls.benefits.mpplus },
+							ip: { value: cls.benefits.ipplus },
+						},
+						martials: {
+							melee: { value: cls.benefits.martials.melee },
+							ranged: { value: cls.benefits.martials.ranged },
+							armor: { value: cls.benefits.martials.armor },
+							shields: { value: cls.benefits.martials.shields },
+						},
+						rituals: {
+							arcanism: { value: cls.benefits.rituals.arcanism },
+							chimerism: { value: cls.benefits.rituals.chimerism },
+							elementalism: { value: cls.benefits.rituals.elementalism },
+							entropism: { value: cls.benefits.rituals.entropism },
+							ritualism: { value: cls.benefits.rituals.ritualism },
+							spiritism: { value: cls.benefits.rituals.spiritism },
+						},
 					},
-					martials: {
-						melee: { value: cls.benefits.martials.melee },
-						ranged: { value: cls.benefits.martials.ranged },
-						armor: { value: cls.benefits.martials.armor },
-						shields: { value: cls.benefits.martials.shields },
-					},
-					rituals: {
-						arcanism: { value: cls.benefits.rituals.arcanism },
-						chimerism: { value: cls.benefits.rituals.chimerism },
-						elementalism: { value: cls.benefits.rituals.elementalism },
-						entropism: { value: cls.benefits.rituals.entropism },
-						ritualism: { value: cls.benefits.rituals.ritualism },
-						spiritism: { value: cls.benefits.rituals.spiritism },
-					},
+					description: "",
 				},
-				description: "",
-			},
-			type: "class" as const,
-		};
-	});
-
-	const skillItems = (data.classes || []).flatMap((cls) =>
-		(cls.skills || [])
-			.filter((skill) => skill.currentLvl > 0)
-			.map(
-				(skill): FUItem => ({
-					type: "skill",
-					name: skill.skillName !== "" ? skill.skillName : "Unnamed Skill",
-					system: {
-						description: skill.description,
-						level: { value: skill.currentLvl, max: skill.maxLvl },
-					},
-				}),
-			),
+				type: "class" as const,
+			};
+		}),
 	);
 
-	const heroicItems = (data.classes || []).flatMap((cls) => {
-		if (cls.heroic && cls.lvl >= 10) {
-			return [
-				{
-					type: "heroic",
-					name: cls.heroic.name !== "" ? cls.heroic.name : "Unnamed Heroic Skill",
-					system: {
-						subtype: { value: "skill" },
-						class: { value: cls.name },
-						description: cls.heroic.description,
-					},
-				},
-			];
-		}
-		return [];
-	});
+	const skillItems = await Promise.all(
+		(data.classes || []).flatMap((cls) =>
+			(cls.skills || [])
+				.filter((skill) => skill.currentLvl > 0)
+				.map(async (skill): Promise<FUItem> => {
+					const skillName = getName(skill.skillName, "Unnamed Skill");
+					if (preferCompendium) {
+						const compendium = game.packs.get("projectfu.skills");
+						if (compendium) {
+							const index = await compendium.getIndex({ fields: ["name"] });
+							const match = index.find((e: { name: unknown }) => e.name === skillName);
+							if (match) {
+								const doc = await compendium.getDocument(match._id);
+								const item = doc.toObject();
+								item.system.level = {
+									value: skill.currentLvl,
+									max: skill.maxLvl,
+								};
+								return item as FUItem;
+							}
+						}
+					}
 
-	const spellItems = (data.classes || []).flatMap((cls) =>
-		(cls.spells || []).map(
-			(pcSpell): FUItem => ({
-				type: "spell" as const,
-				name: pcSpell.name != "" ? pcSpell.name : "Unnamed Spell",
-				system: {
-					mpCost: { value: pcSpell.mp.toString() },
-					maxTargets: { value: pcSpell.maxTargets.toString() },
-					target: { value: pcSpell.targetDesc.toString() },
-					duration: { value: pcSpell.duration },
-					isOffensive: { value: pcSpell.isOffensive == true },
-					hasRoll: { value: pcSpell.isOffensive == true },
-					rollInfo:
-						pcSpell.isOffensive == true
-							? {
-									attributes: {
-										primary: { value: STAT_MAPPING[pcSpell.attr1] },
-										secondary: { value: STAT_MAPPING[pcSpell.attr2] },
-									},
-									accuracy: {
-										value: 0,
-									},
-								}
-							: undefined,
-					description: pcSpell.description,
-					isBehavior: false,
-					weight: { value: 1 },
-					quality: { value: "" },
-				},
-			}),
+					// Fallback if not found in compendium
+					return {
+						type: "skill",
+						name: skillName,
+						system: {
+							description: skill.description,
+							level: { value: skill.currentLvl, max: skill.maxLvl },
+						},
+					};
+				}),
 		),
 	);
 
-	const noteItems = (data.notes || []).flatMap((note): FUItem[] => {
-		return [
-			{
-				name: note.name !== "" ? note.name : "Unnamed Note",
+	const heroicItems = await Promise.all(
+		(data.classes || []).map(async (cls): Promise<FUItem | null> => {
+			if (!cls.heroic || cls.lvl < 10) return null;
+			const heroicName = getName(cls.heroic.name, "Unnamed Heroic Skill");
+			if (preferCompendium) {
+				const compendium = game.packs.get("projectfu.heroic-skills");
+				if (compendium) {
+					const index = await compendium.getIndex({ fields: ["name"] });
+					const match = index.find((e: { name: string }) => e.name === heroicName);
+					if (match) {
+						const doc = await compendium.getDocument(match._id);
+						const item = doc.toObject();
+						item.system.subtype = { value: "skill" };
+						item.system.class = { value: cls.name };
+						return item as FUItem;
+					}
+				}
+			}
+			// Fallback if not found in compendium
+			return {
+				type: "heroic",
+				name: heroicName,
 				system: {
-					description: note.description,
-					isBehavior: false,
-					weight: { value: 1 },
-					hasClock: { value: false },
-					hasRoll: { value: false },
+					subtype: { value: "skill" },
+					class: { value: cls.name },
+					description: cls.heroic.description,
 				},
-				type: "miscAbility" as const,
+			};
+		}),
+	).then((results) => results.filter(Boolean) as FUItem[]);
+
+	const spellItems = await Promise.all(
+		(data.classes || []).map(async (cls): Promise<FUItem[]> => {
+			if (!cls.spells || cls.spells.length === 0) return [];
+			const items = await Promise.all(
+				(cls.spells || []).map(async (pcSpell): Promise<FUItem | null> => {
+					const spellName = getName(pcSpell.name, "Unnamed Spell");
+					if (preferCompendium) {
+						const compendium = game.packs.get("projectfu.spells");
+						if (compendium) {
+							const index = await compendium.getIndex({ fields: ["name"] });
+							const match = index.find((e: { name: string }) => e.name === spellName);
+							if (match) {
+								const doc = await compendium.getDocument(match._id);
+								const item = doc.toObject();
+								return item as FUItem;
+							}
+						}
+					}
+					// Fallback if not found in compendium
+					return {
+						type: "spell",
+						name: spellName,
+						system: {
+							mpCost: { value: pcSpell.mp.toString() },
+							maxTargets: { value: pcSpell.maxTargets.toString() },
+							target: { value: pcSpell.targetDesc.toString() },
+							duration: { value: pcSpell.duration },
+							isOffensive: { value: pcSpell.isOffensive === true },
+							hasRoll: { value: pcSpell.isOffensive === true },
+							rollInfo:
+								pcSpell.isOffensive === true
+									? {
+											attributes: {
+												primary: { value: STAT_MAPPING[pcSpell.attr1] },
+												secondary: { value: STAT_MAPPING[pcSpell.attr2] },
+											},
+											accuracy: { value: 0 },
+										}
+									: undefined,
+							description: pcSpell.description,
+							isBehavior: false,
+							weight: { value: 1 },
+							quality: { value: "" },
+						},
+					};
+				}),
+			);
+			return items.filter((item): item is FUItem => item !== null);
+		}),
+	).then((results) => results.flat());
+
+	const noteItems: FUItem[] = (data.notes || []).flatMap((note) => {
+		const baseNote: FUItem = {
+			name: getName(note.name, "Unnamed Note"),
+			system: {
+				description: note.description,
+				isBehavior: false,
+				weight: { value: 1 },
+				hasClock: { value: false },
+				hasRoll: { value: false },
 			},
-			...(note.clocks || []).map((clock) => ({
-				name: clock.name !== "" ? `${clock.name}` : "Unnamed Clock",
+			type: "miscAbility" as const,
+		};
+		const clockItems: FUItem[] = (note.clocks || []).map((clock) => {
+			const clockName = getName(clock.name, "Unnamed Clock");
+			return {
+				name: clockName,
 				system: {
-					description: clock.name,
+					description: clockName,
 					isBehavior: false,
 					isFavored: { value: true },
 					weight: { value: 1 },
 					hasClock: { value: true },
 					progress: {
+						name: clockName,
 						current: 0,
 						step: 0,
 						max: clock.sections || 0,
@@ -441,8 +514,9 @@ const importFultimatorPC = async (data: Player) => {
 					hasRoll: { value: false },
 				},
 				type: "miscAbility" as const,
-			})),
-		];
+			};
+		});
+		return [baseNote, ...clockItems];
 	});
 
 	const weaponItems = (data.weapons || []).map((weapon): FUItem => {
@@ -892,6 +966,7 @@ enum DataType {
 
 type FultimatorSubmissionData = {
 	text: string;
+	preferCompendium?: boolean;
 };
 
 type FultimatorImportData = FultimatorSubmissionData & {
@@ -899,10 +974,14 @@ type FultimatorImportData = FultimatorSubmissionData & {
 	error?: string;
 	inProgress: boolean;
 	dataType?: DataType;
+	preferCompendium: boolean;
 };
 
 export class FultimatorImportApplication extends FormApplication<FultimatorImportData> {
 	async _updateObject<T extends FultimatorSubmissionData>(_e: Event, data: T) {
+		// Save the user's checkbox setting
+		this.object.preferCompendium = Boolean(data.preferCompendium && data.preferCompendium);
+
 		if (data.text != this.object.text) {
 			delete this.object.error;
 			this.object.text = data.text;
@@ -949,11 +1028,12 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 	}
 
 	async getData(): Promise<FultimatorImportData & { disabled: boolean }> {
-		const { text, error, inProgress, dataType } = this.object;
+		const { text, error, inProgress, dataType, preferCompendium } = this.object;
 		return {
 			...this.object,
 			disabled: !text || !!error || inProgress,
 			dataType,
+			preferCompendium,
 		};
 	}
 
@@ -974,7 +1054,7 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 							await importFultimatorNPC(this.object.parse as Npc);
 							break;
 						case DataType.Pc:
-							await importFultimatorPC(this.object.parse as Player);
+							await importFultimatorPC(this.object.parse as Player, this.object.preferCompendium ?? true);
 							break;
 						case DataType.PCWeapon:
 							await importFultimatorWeapon(this.object.parse as PCWeapon);

@@ -2,6 +2,7 @@ import { Image } from "../pdf/lexers/token";
 
 declare global {
 	const game: {
+		packs: any;
 		folders: Collection<Folder>;
 		user: { isGM: boolean };
 		items: Collection<Item>;
