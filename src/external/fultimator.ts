@@ -26,7 +26,7 @@ export type Weapon = {
 	hands: number;
 	damage: number;
 	type: Elements;
-	quality: string;
+	quality?: string;
 };
 
 export type PCWeapon = {
