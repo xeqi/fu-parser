@@ -19,7 +19,7 @@ export type Weapon = {
 	prec: number;
 	att1: Attributes;
 	att2: Attributes;
-	martial: boolean;
+	martial?: boolean;
 	range?: "melee" | "distance";
 	melee?: boolean;
 	ranged?: boolean;
