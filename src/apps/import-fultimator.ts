@@ -31,7 +31,7 @@ const CATEGORY_MAPPING: Record<WeaponCategory, CATEGORY> = {
 	Bow: "bow",
 	Flail: "flail",
 	Firearm: "firearm",
-	spear_category: "spear",
+	Spear: "spear",
 	Thrown: "thrown",
 	Heavy: "heavy",
 	Dagger: "dagger",

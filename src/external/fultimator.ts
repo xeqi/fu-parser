@@ -5,7 +5,7 @@ export type WeaponCategory =
 	| "Bow"
 	| "Flail"
 	| "Firearm"
-	| "spear_category"
+	| "Spear"
 	| "Thrown"
 	| "Heavy"
 	| "Dagger"
