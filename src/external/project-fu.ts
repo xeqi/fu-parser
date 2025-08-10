@@ -8,7 +8,7 @@ declare global {
 		items: Collection<Item>;
 	};
 	const Hooks: {
-		on(s: "renderSettings", f: (app: unknown, html: JQuery) => unknown): null;
+		on(s: "renderSettings", f: (app: unknown, html: HTMLElement) => unknown): null;
 	};
 	const duplicate: <T>(d: T) => T;
 	const Folder: { create(payload: { name: string; type: string; folder?: string }): Promise<Folder> };

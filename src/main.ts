@@ -47,15 +47,25 @@
 import { FultimatorImportApplication } from "./apps/import-fultimator";
 import { ImportPDFApplication } from "./apps/import-pdf";
 
-Hooks.on("renderSettings", async (_app, $html) => {
+Hooks.on("renderSettings", async (_app, html) => {
 	if (game.user.isGM) {
-		const html = $html[0];
-		const header = document.createElement("h2");
-		header.appendChild(new Text("FU Importer"));
-		const importPDFButton = document.createElement("button");
-		importPDFButton.type = "button";
-		importPDFButton.append("Import PDF");
-		importPDFButton.addEventListener("click", () => {
+		const template = document.createElement("template");
+
+		template.innerHTML = `
+			<section class="fu-importer flexcol">
+				<h4 class="divider">FU Importer</h4>
+				<button type="button" data-action="openPdfImporter">
+					<i class="fa-solid fa-download"></i>
+					Import PDF
+				</button>
+				<button type="button" data-action="openFultimatorImporter">
+					<i class="fa-solid fa-cloud-download"></i>
+					Import Fultimator
+				</button>
+            </section>
+        `;
+
+		template.content.querySelector("[data-action=openPdfImporter]")!.addEventListener("click", () => {
 			const application = new ImportPDFApplication(
 				{ pdfPath: "", imagePath: "", parseResults: [], inProgress: false },
 				{
@@ -70,10 +80,7 @@ Hooks.on("renderSettings", async (_app, $html) => {
 			application.render(true);
 		});
 
-		const importFultimatorButton = document.createElement("button");
-		importFultimatorButton.type = "button";
-		importFultimatorButton.append("Import Fultimator");
-		importFultimatorButton.addEventListener("click", () => {
+		template.content.querySelector("[data-action=openFultimatorImporter]")!.addEventListener("click", () => {
 			const application = new FultimatorImportApplication(
 				{ text: "", dataType: undefined, inProgress: false, preferCompendium: true },
 				{
@@ -87,9 +94,7 @@ Hooks.on("renderSettings", async (_app, $html) => {
 			);
 			application.render(true);
 		});
-		const div = document.createElement("div");
-		div.appendChild(importPDFButton);
-		div.appendChild(importFultimatorButton);
-		html.querySelector("#settings-documentation")?.after(header, div);
+
+		html.querySelector("#settings > section.documentation.flexcol")?.after(template.content);
 	}
 });
