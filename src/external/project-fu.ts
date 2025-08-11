@@ -6,9 +6,10 @@ declare global {
 		folders: Collection<Folder>;
 		user: { isGM: boolean };
 		items: Collection<Item>;
+		version: string;
 	};
 	const Hooks: {
-		on(s: "renderSettings", f: (app: unknown, html: HTMLElement) => unknown): null;
+		on(s: "renderSettings", f: (app: unknown, html: JQuery | HTMLElement) => unknown): null;
 	};
 	const duplicate: <T>(d: T) => T;
 	const Folder: { create(payload: { name: string; type: string; folder?: string }): Promise<Folder> };

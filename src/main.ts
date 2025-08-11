@@ -48,7 +48,14 @@ import { FultimatorImportApplication } from "./apps/import-fultimator";
 import { ImportPDFApplication } from "./apps/import-pdf";
 
 Hooks.on("renderSettings", async (_app, html) => {
-	if (game.user.isGM) {
+	if (!game.user.isGM) {
+		return;
+	}
+
+	const [major] = game.version.split(".").map(Number);
+
+	if (major >= 13) {
+		// FoundryVTT V13+ Support
 		const template = document.createElement("template");
 
 		template.innerHTML = `
@@ -95,6 +102,51 @@ Hooks.on("renderSettings", async (_app, html) => {
 			application.render(true);
 		});
 
-		html.querySelector("#settings > section.documentation.flexcol")?.after(template.content);
+		(html as HTMLElement).querySelector("#settings > section.documentation.flexcol")?.after(template.content);
+	} else {
+		// FoundryVTT V12 and earlier Compatibility
+		const $html = html as JQuery;
+		const htmlElement = $html[0];
+		const header = document.createElement("h2");
+		header.appendChild(new Text("FU Importer"));
+		const importPDFButton = document.createElement("button");
+		importPDFButton.type = "button";
+		importPDFButton.append("Import PDF");
+		importPDFButton.addEventListener("click", () => {
+			const application = new ImportPDFApplication(
+				{ pdfPath: "", imagePath: "", parseResults: [], inProgress: false },
+				{
+					width: 450,
+					height: 600,
+					submitOnChange: true,
+					closeOnSubmit: false,
+					title: "Fabula Ultima PDF importer",
+					resizable: true,
+				},
+			);
+			application.render(true);
+		});
+
+		const importFultimatorButton = document.createElement("button");
+		importFultimatorButton.type = "button";
+		importFultimatorButton.append("Import Fultimator");
+		importFultimatorButton.addEventListener("click", () => {
+			const application = new FultimatorImportApplication(
+				{ text: "", dataType: undefined, inProgress: false, preferCompendium: true },
+				{
+					width: 450,
+					height: 600,
+					submitOnChange: true,
+					closeOnSubmit: false,
+					title: "Fultimator import",
+					resizable: true,
+				},
+			);
+			application.render(true);
+		});
+		const div = document.createElement("div");
+		div.appendChild(importPDFButton);
+		div.appendChild(importFultimatorButton);
+		htmlElement.querySelector("#settings-documentation")?.after(header, div);
 	}
 });
