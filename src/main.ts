@@ -47,9 +47,66 @@
 import { FultimatorImportApplication } from "./apps/import-fultimator";
 import { ImportPDFApplication } from "./apps/import-pdf";
 
-Hooks.on("renderSettings", async (_app, $html) => {
-	if (game.user.isGM) {
-		const html = $html[0];
+Hooks.on("renderSettings", async (_app, html) => {
+	if (!game.user.isGM) {
+		return;
+	}
+
+	const [major] = game.version.split(".").map(Number);
+
+	if (major >= 13) {
+		// FoundryVTT V13+ Support
+		const template = document.createElement("template");
+
+		template.innerHTML = `
+			<section class="fu-importer flexcol">
+				<h4 class="divider">FU Importer</h4>
+				<button type="button" data-action="openPdfImporter">
+					<i class="fa-solid fa-download"></i>
+					Import PDF
+				</button>
+				<button type="button" data-action="openFultimatorImporter">
+					<i class="fa-solid fa-cloud-download"></i>
+					Import Fultimator
+				</button>
+            </section>
+        `;
+
+		template.content.querySelector("[data-action=openPdfImporter]")!.addEventListener("click", () => {
+			const application = new ImportPDFApplication(
+				{ pdfPath: "", imagePath: "", parseResults: [], inProgress: false },
+				{
+					width: 450,
+					height: 600,
+					submitOnChange: true,
+					closeOnSubmit: false,
+					title: "Fabula Ultima PDF importer",
+					resizable: true,
+				},
+			);
+			application.render(true);
+		});
+
+		template.content.querySelector("[data-action=openFultimatorImporter]")!.addEventListener("click", () => {
+			const application = new FultimatorImportApplication(
+				{ text: "", dataType: undefined, inProgress: false, preferCompendium: true },
+				{
+					width: 450,
+					height: 600,
+					submitOnChange: true,
+					closeOnSubmit: false,
+					title: "Fultimator import",
+					resizable: true,
+				},
+			);
+			application.render(true);
+		});
+
+		(html as HTMLElement).querySelector("#settings > section.documentation.flexcol")?.after(template.content);
+	} else {
+		// FoundryVTT V12 and earlier Compatibility
+		const $html = html as JQuery;
+		const htmlElement = $html[0];
 		const header = document.createElement("h2");
 		header.appendChild(new Text("FU Importer"));
 		const importPDFButton = document.createElement("button");
@@ -90,6 +147,6 @@ Hooks.on("renderSettings", async (_app, $html) => {
 		const div = document.createElement("div");
 		div.appendChild(importPDFButton);
 		div.appendChild(importFultimatorButton);
-		html.querySelector("#settings-documentation")?.after(header, div);
+		htmlElement.querySelector("#settings-documentation")?.after(header, div);
 	}
 });
