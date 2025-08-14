@@ -1,7 +1,4 @@
-export type Image = {
-	width: number;
-	height: number;
-};
+import { Image } from "../model/common";
 
 export type ImageToken = { kind: "Image"; image: Image };
 export type StringToken = { kind: "String"; string: string; font: string };
@@ -12,4 +9,12 @@ export const isImageToken = (token: Token): token is ImageToken => {
 };
 export const isStringToken = (token: Token): token is StringToken => {
 	return token.kind === "String";
+};
+
+export const asStringToken = (token: Token) => token as StringToken;
+export const asImageToken = (token: Token) => token as ImageToken;
+
+export type ItemToken = {
+	image: ImageToken;
+	strings: StringToken[];
 };

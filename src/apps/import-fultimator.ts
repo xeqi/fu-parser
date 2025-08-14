@@ -15,8 +15,7 @@ import {
 	PCAccessory,
 } from "../external/fultimator";
 import { ATTR, CATEGORY, FUActor, FUItem, FUActorPC } from "../external/project-fu";
-import { DamageType } from "../pdf/parsers/lib";
-// import { Accessory } from "../pdf/parsers/accessoryPage";
+import { DamageType } from "../pdf/model/common";
 
 interface BondInput {
 	name: string;

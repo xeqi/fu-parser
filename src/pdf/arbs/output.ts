@@ -1,4 +1,5 @@
-import { Image, ImageToken, StringToken } from "../lexers/token";
+import { ImageToken, StringToken } from "../lexers/token";
+import { Image } from "../model/common";
 
 export const imageToken = (image: Image): ImageToken => {
 	return { kind: "Image", image: image };

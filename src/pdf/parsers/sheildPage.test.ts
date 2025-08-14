@@ -1,9 +1,12 @@
 import fc from "fast-check";
 import { cost, description, word } from "../arbs/arbs";
-import { flatMap, isResult, prettifyStrings } from "./lib";
-import { Image, Token } from "../lexers/token";
+import { flatMap, isResult } from "./lib";
+import { Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
-import { Shield, shieldPage } from "./shieldPage";
+import { shieldPage } from "./shieldPage";
+import { Shield } from "../model/shield";
+import { Image } from "../model/common";
+import { prettifyStrings } from "../parsers-commons";
 
 const shieldDataGen = fc.array(
 	fc.record({

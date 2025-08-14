@@ -1,14 +1,21 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { Affinity, Parser, Stat, flatMap, isError, isResult } from "../pdf/parsers/lib";
-import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
-import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
-import { Armor, armorPage } from "../pdf/parsers/armorPage";
-import { Shield, shieldPage } from "../pdf/parsers/shieldPage";
-import { Accessory, accessories } from "../pdf/parsers/accessoryPage";
-import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
+import { flatMap, isError, isResult, Parser } from "../pdf/parsers/lib";
+import { consumablesPage } from "../pdf/parsers/consumablePage";
+import { basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
+import { armorPage } from "../pdf/parsers/armorPage";
+import { shieldPage } from "../pdf/parsers/shieldPage";
+import { accessories } from "../pdf/parsers/accessoryPage";
+import { beastiary } from "../pdf/parsers/beastiaryPage";
 import { StringToken } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
+import { Beast } from "../pdf/model/beast";
+import { Affinity, Stat } from "../pdf/model/common";
+import { Consumable } from "../pdf/model/consumable";
+import { Weapon } from "../pdf/model/weapon";
+import { Armor } from "../pdf/model/armor";
+import { Accessory } from "../pdf/model/accessory";
+import { Shield } from "../pdf/model/shield";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -478,7 +485,7 @@ const PAGES = {
 	355: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
 } as const;
 
-type ParseResult = { page: number } & (
+export type ParseResult = { page: number } & (
 	| { type: "success"; save: (imagePath: string) => Promise<void>; cleanup: () => boolean }
 	| { type: "failure"; errors: { found: string; error: string; distance: number }[] }
 	| { type: "too many"; count: number; errors: { found: string; error: string; distance: number }[] }

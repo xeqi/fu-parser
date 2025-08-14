@@ -1,4 +1,3 @@
-import { Image } from "../lexers/token";
 import {
 	Parser,
 	alt,
@@ -18,17 +17,7 @@ import {
 	success,
 	watermark,
 } from "./lib";
-
-export type Shield = {
-	image: Image;
-	name: string;
-	martial: boolean;
-	cost: number;
-	def: number;
-	mdef: number;
-	init: number;
-	description: string;
-};
+import { Shield } from "../model/shield";
 
 const def = dashOrNumber("def");
 const mdef = dashOrNumber("mdef");

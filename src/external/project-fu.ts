@@ -1,4 +1,4 @@
-import { Image } from "../pdf/lexers/token";
+import { Image } from "../pdf/model/common";
 
 declare global {
 	const game: {

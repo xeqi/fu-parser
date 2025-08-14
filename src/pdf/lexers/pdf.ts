@@ -1,6 +1,7 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { Image, Token } from "./token";
+import { Token } from "./token";
 import { DocumentInitParameters, TypedArray } from "pdfjs-dist/types/src/display/api";
+import { Image } from "../model/common";
 
 export const tokenizePDF = async (
 	docId: string | URL | TypedArray | ArrayBuffer | DocumentInitParameters,

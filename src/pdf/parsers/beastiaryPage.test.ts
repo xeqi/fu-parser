@@ -1,9 +1,13 @@
 import fc from "fast-check";
 import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
 import { imageToken, stringToken, watermark } from "../arbs/output";
-import { Image, Token } from "../lexers/token";
-import { DAMAGE_TYPES, DIE_SIZES, Distance, STATS, flatMap, isResult, prettifyStrings, TYPE_CODES } from "./lib";
-import { Beast, beastiary } from "./beastiaryPage";
+import { Token } from "../lexers/token";
+import { flatMap, isResult } from "./lib";
+import { beastiary } from "./beastiaryPage";
+
+import { DAMAGE_TYPES, DIE_SIZES, Distance, Image, STATS, TYPE_CODES } from "../model/common";
+import { Beast } from "../model/beast";
+import { prettifyStrings } from "../parsers-commons";
 
 const beastiaryDataGen = fc.array(
 	fc.record({
