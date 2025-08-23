@@ -6,6 +6,7 @@ export type WeaponCategory =
 	| "Flail"
 	| "Firearm"
 	| "Spear"
+	| "spear_category" // Handle the case where the category is "spear_category"
 	| "Thrown"
 	| "Heavy"
 	| "Dagger"
@@ -320,22 +321,56 @@ export interface PCHeroicSkills {
 }
 
 export type PCSpells = {
-	name: string;
-	mp: number;
-	maxTargets: number;
-	targetDesc: string;
-	description: string;
+	name?: string;
+	mp?: number;
+	maxTargets?: number;
+	targetDesc?: string;
+	description?: string;
 	class?: string;
-	duration: string;
-	isOffensive: boolean;
-	attr1: Attributes;
-	attr2: Attributes;
+	duration?: string;
+	isOffensive?: boolean;
+	isMagisphere?: boolean;
+	attr1?: Attributes;
+	attr2?: Attributes;
 	effect1?: string;
 	effect2?: string;
 	effect3?: string;
 	effect4?: string;
 	effect5?: string;
 	effect6?: string;
+	spellType?: string;
+	mergeDesc?: string;
+	merge?: string;
+	dismissDesc?: string;
+	domainDesc?: string;
+	domain?: string;
+	dismiss?: string;
+	pulse?: string;
+	pulseDesc?: string;
+	tones?: Array<{
+		name: string;
+		effect?: string;
+		customName?: string;
+	}>;
+	keys?: Array<{
+		name: string;
+		recovery?: string;
+		customName?: string;
+		type?: string;
+		status?: string;
+		attribute?: string;
+	}>;
+	dances?: Array<{
+		name: string;
+		effect?: string;
+		duration?: string;
+		customName?: string;
+	}>;
+	symbols?: Array<{
+		name: string;
+		effect?: string;
+		customName?: string;
+	}>;
 };
 
 export type PCWeaponAttack = {
