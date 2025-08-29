@@ -295,6 +295,7 @@ export type FUItem = Item &
 						duration: { value: string };
 						isOffensive: { value: boolean };
 						quality: { value: string };
+						summary?: { value: string };
 					};
 		  }
 		| {
@@ -325,6 +326,25 @@ export type FUItem = Item &
 					data: {
 						description: string;
 					};
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					featureType: string;
+					data: {
+						merge?: string;
+						pulse?: string;
+						dismiss?: string;
+						domains?: string;
+						duration?: string;
+						description?: string;
+					};
+					source: string;
 				};
 		  }
 		| {

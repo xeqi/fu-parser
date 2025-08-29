@@ -17,6 +17,27 @@ import {
 import { ATTR, CATEGORY, FUActor, FUItem, FUActorPC } from "../external/project-fu";
 import { DamageType } from "../pdf/model/common";
 
+/**
+ * Takes an input and returns the slugged string of it.
+ * @param {any} input - The input to be slugged.
+ * @returns {string} - The slugged version of the input string.
+ */
+export function slugify(input: string) {
+	const slugged = String(input)
+		.normalize("NFKD") // split accented characters into their base characters and diacritical marks
+		.replace(/[\u0300-\u036f]/g, "") // remove all the accents, which happen to be all in the \u03xx UNICODE block.
+		.toLowerCase() // convert to lowercase
+		.replace(/[^a-z0-9 -]/g, "") // remove non-alphanumeric characters
+		.replace(/\s+/g, "-") // replace spaces with hyphens
+		.replace(/-+/g, "-") // remove consecutive hyphens
+		.replace(/^-+/g, "") // remove leading hyphens
+		.replace(/-+$/g, "") // remove trailing hyphens
+		.trim(); // trim leading or trailing whitespace
+
+	console.debug([input, slugged]);
+	return slugged;
+}
+
 interface BondInput {
 	name: string;
 	admInf: "Admiration" | "Inferiority" | "";
@@ -31,6 +52,7 @@ const CATEGORY_MAPPING: Record<WeaponCategory, CATEGORY> = {
 	Flail: "flail",
 	Firearm: "firearm",
 	Spear: "spear",
+	spear_category: "spear", // Handle the case where the category is "spear_category"
 	Thrown: "thrown",
 	Heavy: "heavy",
 	Dagger: "dagger",
@@ -431,22 +453,460 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		}),
 	).then((results) => results.filter(Boolean) as FUItem[]);
 
+	// Helper function for FUID-based compendium lookup
+	const lookupInCompendium = async (compendiumName: string, fuid: string): Promise<FUItem | null> => {
+		const compendium = game.packs.get(compendiumName);
+		if (!compendium) return null;
+
+		// Use your existing getSingleItemByFuid method if available
+		if (compendium.getSingleItemByFuid) {
+			return compendium.getSingleItemByFuid(fuid);
+		}
+
+		// Or implement FUID lookup directly
+		const index = await compendium.getIndex({ fields: ["flags", "name"] });
+		const match = index.find((e: any) => {
+			// Type guard to safely access properties
+			if (typeof e === "object" && e !== null) {
+				const item = e as { flags?: any; name?: string; _id?: string };
+				return item.flags?.core?.sourceId?.includes(fuid) || (item.name && slugify(item.name) === fuid);
+			}
+			return false;
+		});
+
+		if (match) {
+			const doc = await compendium.getDocument((match as any)._id);
+			return doc.toObject() as FUItem;
+		}
+
+		return null;
+	};
+
 	const spellItems = await Promise.all(
 		(data.classes || []).map(async (cls): Promise<FUItem[]> => {
 			if (!cls.spells || cls.spells.length === 0) return [];
 			const items = await Promise.all(
-				(cls.spells || []).map(async (pcSpell): Promise<FUItem | null> => {
+				(cls.spells || []).map(async (pcSpell): Promise<FUItem | FUItem[] | null> => {
 					const spellName = getName(pcSpell.name, "Unnamed Spell");
-					if (preferCompendium) {
-						const compendium = game.packs.get("projectfu.spells");
-						if (compendium) {
-							const index = await compendium.getIndex({ fields: ["name"] });
-							const match = index.find((e: { name: string }) => e.name === spellName);
-							if (match) {
-								const doc = await compendium.getDocument(match._id);
-								const item = doc.toObject();
-								return item as FUItem;
+
+					// Handle arcanist spell type as classFeature
+					if (pcSpell.spellType === "arcanist") {
+						if (preferCompendium) {
+							const fuid = slugify(spellName);
+							const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+							if (compendiumItem) {
+								return compendiumItem;
 							}
+						}
+						// Fallback if not found in compendium
+						return {
+							type: "classFeature",
+							name: spellName,
+							img: "icons/svg/item-bag.svg",
+							system: {
+								fuid: spellName,
+								summary: {
+									value: "",
+								},
+								featureType: "projectfu.arcanum",
+								data: {
+									merge: `<p>${pcSpell.mergeDesc || pcSpell.merge || ""}</p>`,
+									dismiss: `<p>${pcSpell.dismissDesc || pcSpell.domainDesc || ""}</p>`,
+									domains: pcSpell.domain || "",
+								},
+								source: "",
+							},
+						};
+					}
+
+					// Handle arcanist-rework spell type as classFeature
+					if (pcSpell.spellType === "arcanist-rework") {
+						if (preferCompendium) {
+							const fuid = slugify(spellName);
+							const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+							if (compendiumItem) {
+								return compendiumItem;
+							}
+						}
+						// Fallback if not found in compendium
+						return {
+							type: "classFeature",
+							name: spellName,
+							img: "icons/svg/item-bag.svg",
+							system: {
+								fuid: spellName,
+								summary: {
+									value: "",
+								},
+								featureType: "projectfu-playtest.arcanum2",
+								data: {
+									merge: `<p>${pcSpell.mergeDesc || pcSpell.merge || ""}</p>`,
+									dismiss: `<p>${pcSpell.dismissDesc || pcSpell.dismiss || ""}</p>`,
+									pulse: `<p>${pcSpell.pulseDesc || pcSpell.pulse || ""}</p>`,
+									domains: pcSpell.domain || "",
+								},
+								source: "",
+							},
+						};
+					}
+
+					if (
+						pcSpell.spellType === "tinkerer-alchemy" ||
+						pcSpell.spellType === "tinkerer-infusion" ||
+						pcSpell.spellType === "tinkerer-magitech"
+					) {
+						// Tinkerer FUID mappings for compendium lookup
+						const tinkererFuidMap: Record<string, string> = {
+							"tinkerer-alchemy": "gadget-alchemy",
+							"tinkerer-infusion": "gadget-infusion",
+							"tinkerer-magitech": "gadget-magitech",
+						};
+						if (preferCompendium) {
+							const fuid = tinkererFuidMap[pcSpell.spellType];
+							const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+							if (compendiumItem) {
+								return compendiumItem;
+							}
+						}
+					}
+
+					// Handle magichant spell type
+					if (pcSpell.spellType === "magichant") {
+						const magichantItems: FUItem[] = [];
+
+						// Key FUID mappings for compendium lookup
+						const keyFuidMap: Record<string, string> = {
+							magichant_flame: "key-of-flame",
+							magichant_frost: "key-of-frost",
+							magichant_iron: "key-of-iron",
+							magichant_radiance: "key-of-radiance",
+							magichant_shadow: "key-of-shadow",
+							magichant_stone: "key-of-stone",
+							magichant_thunder: "key-of-thunder",
+							magichant_wind: "key-of-wind",
+						};
+
+						// Key display name mappings
+						const keyDisplayMap: Record<string, string> = {
+							magichant_flame: "Key of Flame",
+							magichant_frost: "Key of Frost",
+							magichant_iron: "Key of Iron",
+							magichant_radiance: "Key of Radiance",
+							magichant_shadow: "Key of Shadow",
+							magichant_stone: "Key of Stone",
+							magichant_thunder: "Key of Thunder",
+							magichant_wind: "Key of Wind",
+						};
+
+						// Tone FUID mappings for compendium lookup
+						const toneFuidMap: Record<string, string> = {
+							magichant_tone_calm: "calm-tone",
+							magichant_tone_energetic: "energetic-tone",
+							magichant_tone_frantic: "frantic-tone",
+							magichant_tone_haunting: "haunting-tone",
+							magichant_tone_lively: "lively-tone",
+							magichant_tone_menacing: "menacing-tone",
+							magichant_tone_solemn: "solemn-tone",
+						};
+
+						// Tone display name mappings
+						const toneDisplayMap: Record<string, string> = {
+							magichant_tone_calm: "Calm Tone",
+							magichant_tone_energetic: "Energetic Tone",
+							magichant_tone_frantic: "Frantic Tone",
+							magichant_tone_haunting: "Haunting Tone",
+							magichant_tone_lively: "Lively Tone",
+							magichant_tone_menacing: "Menacing Tone",
+							magichant_tone_solemn: "Solemn Tone",
+						};
+
+						// Process keys
+						if (pcSpell.keys) {
+							for (const key of pcSpell.keys) {
+								if (preferCompendium && keyFuidMap[key.name]) {
+									const fuid = keyFuidMap[key.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										magichantItems.push(compendiumItem);
+										continue;
+									}
+								}
+								// Fallback for keys not found in compendium or custom keys
+								const keyName = key.customName || keyDisplayMap[key.name] || key.name;
+								magichantItems.push({
+									type: "classFeature",
+									name: keyName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid: keyName,
+										summary: { value: "" },
+										featureType: "projectfu.key",
+										data: {},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Process tones
+						if (pcSpell.tones) {
+							for (const tone of pcSpell.tones) {
+								if (preferCompendium && toneFuidMap[tone.name]) {
+									const fuid = toneFuidMap[tone.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										magichantItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for tones not found in compendium or custom tones
+								const toneName = tone.customName || toneDisplayMap[tone.name] || tone.name;
+								magichantItems.push({
+									type: "classFeature",
+									name: toneName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid: toneName,
+										summary: { value: "" },
+										featureType: "projectfu.tone",
+										data: {
+											description: tone.effect || "",
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all magichant items
+						return magichantItems.length > 0 ? magichantItems : null;
+					}
+
+					// Handle dance spell type
+					if (pcSpell.spellType === "dance") {
+						const danceItems: FUItem[] = [];
+
+						// Duration mappings
+						const durationMap: Record<string, string> = {
+							dance_duration_next_turn: "nextTurn",
+							dance_duration_instant: "instant",
+							"Until the start of your next turn": "nextTurn",
+							Instantaneous: "instant",
+						};
+
+						// Dance FUID mappings for compendium lookup
+						const danceFuidMap: Record<string, string> = {
+							dance_angel: "angel-dance",
+							dance_banshee: "banshee-dance",
+							dance_bat: "bat-dance",
+							dance_cat: "cat-dance",
+							dance_devil: "devil-dance",
+							dance_dragon: "dragon-dance",
+							dance_falcon: "falcon-dance",
+							dance_fox: "fox-dance",
+							dance_golem: "golem-dance",
+							dance_griffin: "griffin-dance",
+							dance_hydra: "hydra-dance",
+							dance_kraken: "kraken-dance",
+							dance_lion: "lion-dance",
+							dance_maenad: "maenad-dance",
+							dance_myrmidon: "myrmidon-dance",
+							dance_nightmare: "nightmare-dance",
+							dance_ouroboros: "ouroboros-dance",
+							dance_peacock: "peacock-dance",
+							dance_phoenix: "phoenix-dance",
+							dance_satyr: "satyr-dance",
+							dance_spider: "spider-dance",
+							dance_turtle: "turtle-dance",
+							dance_unicorn: "unicorn-dance",
+							dance_wolf: "wolf-dance",
+							dance_yeti: "yeti-dance",
+						};
+
+						// Dance display name mappings
+						const danceDisplayMap: Record<string, string> = {
+							dance_angel: "Angel Dance",
+							dance_banshee: "Banshee Dance",
+							dance_bat: "Bat Dance",
+							dance_cat: "Cat Dance",
+							dance_devil: "Devil Dance",
+							dance_dragon: "Dragon Dance",
+							dance_falcon: "Falcon Dance",
+							dance_fox: "Fox Dance",
+							dance_golem: "Golem Dance",
+							dance_griffin: "Griffin Dance",
+							dance_hydra: "Hydra Dance",
+							dance_kraken: "Kraken Dance",
+							dance_lion: "Lion Dance",
+							dance_maenad: "Maenad Dance",
+							dance_myrmidon: "Myrmidon Dance",
+							dance_nightmare: "Nightmare Dance",
+							dance_ouroboros: "Ouroboros Dance",
+							dance_peacock: "Peacock Dance",
+							dance_phoenix: "Phoenix Dance",
+							dance_satyr: "Satyr Dance",
+							dance_spider: "Spider Dance",
+							dance_turtle: "Turtle Dance",
+							dance_unicorn: "Unicorn Dance",
+							dance_wolf: "Wolf Dance",
+							dance_yeti: "Yeti Dance",
+						};
+
+						// Process dances
+						if (pcSpell.dances) {
+							for (const dance of pcSpell.dances) {
+								const danceName =
+									dance.name === "dance_custom_name"
+										? dance.customName || "Custom Dance"
+										: danceDisplayMap[dance.name] || dance.name;
+
+								if (preferCompendium && danceFuidMap[dance.name]) {
+									const fuid = danceFuidMap[dance.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										danceItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for dances not found in compendium or custom dances
+								danceItems.push({
+									type: "classFeature",
+									name: danceName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid:
+											dance.name === "dance_custom_name"
+												? danceName.toLowerCase().replace(/\s+/g, "-")
+												: dance.name,
+										summary: { value: "" },
+										featureType: "projectfu.dance",
+										data: {
+											duration: durationMap[dance.duration || ""] || dance.duration || "",
+											description: dance.effect || "",
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all dance items
+						return danceItems.length > 0 ? danceItems : null;
+					}
+
+					// Handle symbol spell type
+					if (pcSpell.spellType === "symbol") {
+						const symbolItems: FUItem[] = [];
+
+						// Symbol FUID mappings for compendium lookup
+						const symbolFuidMap: Record<string, string> = {
+							symbol_binding: "symbol-of-binding",
+							symbol_creation: "symbol-of-creation",
+							symbol_despair: "symbol-of-despair",
+							symbol_destiny: "symbol-of-destiny",
+							symbol_elements: "symbol-of-elements",
+							symbol_enmity: "symbol-of-enmity",
+							symbol_flux: "symbol-of-flux",
+							symbol_forbiddance: "symbol-of-forbiddance",
+							symbol_growth: "symbol-of-growth",
+							symbol_metamorphosis: "symbol-of-metamorphosis",
+							symbol_prosperity: "symbol-of-prosperity",
+							symbol_protection: "symbol-of-protection",
+							symbol_rebellion: "symbol-of-rebellion",
+							symbol_rebirth: "symbol-of-rebirth",
+							symbol_revenge: "symbol-of-revenge",
+							symbol_sacrifice: "symbol-of-sacrifice",
+							symbol_sorcery: "symbol-of-sorcery",
+							symbol_truth: "symbol-of-truth",
+							symbol_weakness: "symbol-of-weakness",
+							symbol_custom_name: "custom-symbol",
+						};
+
+						// Symbol display name mappings
+						const symbolDisplayMap: Record<string, string> = {
+							symbol_binding: "Symbol of Binding",
+							symbol_creation: "Symbol of Creation",
+							symbol_despair: "Symbol of Despair",
+							symbol_destiny: "Symbol of Destiny",
+							symbol_elements: "Symbol of Elements",
+							symbol_enmity: "Symbol of Enmity",
+							symbol_flux: "Symbol of Flux",
+							symbol_forbiddance: "Symbol of Forbiddance",
+							symbol_growth: "Symbol of Growth",
+							symbol_metamorphosis: "Symbol of Metamorphosis",
+							symbol_prosperity: "Symbol of Prosperity",
+							symbol_protection: "Symbol of Protection",
+							symbol_rebellion: "Symbol of Rebellion",
+							symbol_rebirth: "Symbol of Rebirth",
+							symbol_revenge: "Symbol of Revenge",
+							symbol_sacrifice: "Symbol of Sacrifice",
+							symbol_sorcery: "Symbol of Sorcery",
+							symbol_truth: "Symbol of Truth",
+							symbol_weakness: "Symbol of Weakness",
+							symbol_custom_name: "Custom Symbol",
+						};
+
+						// Process symbols
+						if (pcSpell.symbols) {
+							for (const symbol of pcSpell.symbols) {
+								const symbolName =
+									symbol.name === "symbol_custom_name"
+										? symbol.customName || "Custom Symbol"
+										: symbolDisplayMap[symbol.name] || symbol.name;
+
+								if (preferCompendium && symbolFuidMap[symbol.name]) {
+									const fuid = symbolFuidMap[symbol.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										symbolItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for symbols not found in compendium or custom symbols
+								symbolItems.push({
+									type: "classFeature",
+									name: symbolName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid:
+											symbol.name === "symbol_custom_name"
+												? symbolName.toLowerCase().replace(/\s+/g, "_")
+												: symbol.name,
+										summary: { value: "" },
+										featureType: "projectfu.symbol",
+										data: {
+											description: symbol.effect || "",
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all symbol items
+						return symbolItems.length > 0 ? symbolItems : null;
+					}
+
+					// Handle gamble spell type
+					if (pcSpell.spellType === "gamble") {
+						if (preferCompendium) {
+							const fuid = "gamble";
+							const compendiumItem = await lookupInCompendium("projectfu.spells", fuid);
+							if (compendiumItem) {
+								return compendiumItem;
+							}
+						}
+					}
+
+					// Handle default spell type as regular spell
+					if (preferCompendium) {
+						const fuid = slugify(spellName);
+						const compendiumItem = await lookupInCompendium("projectfu.spells", fuid);
+						if (compendiumItem) {
+							return compendiumItem;
 						}
 					}
 					// Fallback if not found in compendium
@@ -454,14 +914,14 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 						type: "spell",
 						name: spellName,
 						system: {
-							mpCost: { value: pcSpell.mp.toString() },
-							maxTargets: { value: pcSpell.maxTargets.toString() },
-							target: { value: pcSpell.targetDesc.toString() },
-							duration: { value: pcSpell.duration },
+							mpCost: { value: (pcSpell.mp ?? 0).toString() },
+							maxTargets: { value: (pcSpell.maxTargets ?? 1).toString() },
+							target: { value: (pcSpell.targetDesc ?? "").toString() },
+							duration: { value: pcSpell.duration ?? "" },
 							isOffensive: { value: pcSpell.isOffensive === true },
 							hasRoll: { value: pcSpell.isOffensive === true },
 							rollInfo:
-								pcSpell.isOffensive === true
+								pcSpell.isOffensive === true && pcSpell.attr1 && pcSpell.attr2
 									? {
 											attributes: {
 												primary: { value: STAT_MAPPING[pcSpell.attr1] },
@@ -470,15 +930,18 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 											accuracy: { value: 0 },
 										}
 									: undefined,
-							description: pcSpell.description,
+							description: pcSpell.description || "",
 							isBehavior: false,
 							weight: { value: 1 },
 							quality: { value: "" },
+							summary: { value: pcSpell.isMagisphere ? "Magisphere" : "" },
 						},
 					};
 				}),
 			);
-			return items.filter((item): item is FUItem => item !== null);
+			return items
+				.filter((item): item is FUItem | FUItem[] => item !== null)
+				.flatMap((item) => (Array.isArray(item) ? item : [item]));
 		}),
 	).then((results) => results.flat());
 
@@ -610,14 +1073,21 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		};
 	});
 
-	const quirkItems: FUItem[] = (Array.isArray(data.quirk) ? data.quirk : []).map((quirk) => ({
-		type: "optionalFeature" as const,
-		name: quirk.name !== "" ? quirk.name : "Unnamed quirk",
-		system: {
-			optionalType: "projectfu.quirk",
-			data: { description: (quirk.description || "") + "<br>" + (quirk.effect || "") },
-		},
-	}));
+	const quirkItems: FUItem[] = [];
+	if (data.quirk) {
+		// Handle both single quirk object and array of quirks
+		const quirks = Array.isArray(data.quirk) ? data.quirk : [data.quirk];
+		quirkItems.push(
+			...quirks.map((quirk) => ({
+				type: "optionalFeature" as const,
+				name: quirk.name !== "" ? quirk.name : "Unnamed quirk",
+				system: {
+					optionalType: "projectfu.quirk",
+					data: { description: (quirk.description || "") + "<br>" + (quirk.effect || "") },
+				},
+			})),
+		);
+	}
 
 	// Create the actor and add items
 	const actor = await Actor.create(payload);
