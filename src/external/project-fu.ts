@@ -206,6 +206,26 @@ type Bonds = {
 	strength: number;
 };
 
+type WeaponModuleFeature = {
+	type: ModuleType;
+	description: string;
+	accuracy: {
+		attr1: ATTR;
+		attr2: ATTR;
+		modifier: number;
+	};
+	damage: {
+		type: DamageType;
+		bonus: number;
+	};
+	category: WeaponCategory;
+	shield: {
+		defense: number;
+		magicDefense: number;
+	};
+	complex: boolean;
+};
+
 export type FUItem = Item &
 	(
 		| {
@@ -331,6 +351,14 @@ export type FUItem = Item &
 		| {
 				type: "classFeature";
 				system: {
+					featureType: "projectfu.weaponModule";
+					source: string;
+					data: WeaponModuleFeature;
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
 					fuid: string;
 					summary: {
 						value: string;
@@ -345,32 +373,6 @@ export type FUItem = Item &
 						description?: string;
 					};
 					source: string;
-				};
-		  }
-		| {
-				type: "classFeature";
-				system: {
-					featureType: "projectfu.weaponModule";
-					source: string;
-					data: {
-						type: ModuleType;
-						description: string;
-						accuracy: {
-							attr1: ATTR;
-							attr2: ATTR;
-							modifier: number;
-						};
-						damage: {
-							type: DamageType;
-							bonus: number;
-						};
-						category: WeaponCategory;
-						shield: {
-							defense: number;
-							magicDefense: number;
-						};
-						complex: boolean;
-					};
 				};
 		  }
 	);

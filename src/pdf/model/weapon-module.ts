@@ -21,7 +21,7 @@ export function weaponModuleToFuItem(data: WeaponModule, imagePath: string, fold
 		img: imagePath + "/" + data.name + ".png",
 		folder: folderId,
 		system: {
-			featureType: "projectfu.weaponModule",
+			featureType: "projectfu.weaponModule" as const,
 			source: source,
 			data: {
 				type: data.moduleType,
