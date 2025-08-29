@@ -1,4 +1,4 @@
-import { Image } from "../pdf/model/common";
+import { Image, ModuleType, WeaponCategory } from "../pdf/model/common";
 
 declare global {
 	const game: {
@@ -137,7 +137,7 @@ type DamageType = "physical" | "air" | "bolt" | "dark" | "earth" | "fire" | "ice
 
 type Base = {
 	description: string;
-	source?: { value: number };
+	source?: { value: string };
 };
 type SystemItem = {
 	cost: { value: number };
@@ -327,6 +327,32 @@ export type FUItem = Item &
 					};
 				};
 		  }
+		| {
+				type: "classFeature";
+				system: {
+					featureType: "projectfu.weaponModule";
+					source: string;
+					data: {
+						type: ModuleType;
+						description: string;
+						accuracy: {
+							attr1: ATTR;
+							attr2: ATTR;
+							modifier: number;
+						};
+						damage: {
+							type: DamageType;
+							bonus: number;
+						};
+						category: WeaponCategory;
+						shield: {
+							defense: number;
+							magicDefense: number;
+						};
+						complex: boolean;
+					};
+				};
+		  }
 	);
 
 export type FUActor = Actor & {
@@ -376,7 +402,7 @@ export type FUActor = Actor & {
 		isCompanion: { value: boolean };
 		useEquipment: { value: boolean };
 		study: { value: 0 };
-		source?: { value: number };
+		source?: { value: string };
 	};
 };
 

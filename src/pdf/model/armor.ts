@@ -1,4 +1,5 @@
 import { Image } from "./common";
+import { FUItem } from "../../external/project-fu";
 
 export type Armor = {
 	image: Image;
@@ -20,3 +21,23 @@ export const convertDef = (prefix: string) => (s: string) => {
 		return num === "" ? 0 : Number(num);
 	} else return s === "-" ? 0 : Number(s);
 };
+
+export function armorToFuItem(data: Armor, imagePath: string, folderId: string, source: string): FUItem {
+	return {
+		type: "armor" as const,
+		name: data.name,
+		img: imagePath + "/" + data.name + ".png",
+		folder: folderId,
+		system: {
+			isMartial: { value: data.martial },
+			description: data.description === "No Quality." ? "" : data.description,
+			cost: { value: data.cost },
+			source: { value: source },
+			def: { value: data.def },
+			mdef: { value: data.mdef },
+			init: { value: data.init },
+			isBehavior: false,
+			weight: { value: 1 },
+		},
+	};
+}

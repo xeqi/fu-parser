@@ -11,11 +11,17 @@ import { parseWeaponModule } from "./weapon-module-parser";
 export function parseAtlasPage(pageData: Token[]): Map<ItemCategory, Item[]> {
 	const watermark = pageData[pageData.length - 1];
 	if (watermark.kind !== "String" || asStringToken(watermark).font !== "Helvetica") {
-		throw new Error("Error, not watermarked"); // TODO better error handling?
+		throw new Error("Failed to parse page because it is not watermarked.");
 	} else {
 		const itemTokensByCategory = itemizeTokens(pageData);
 		return itemTokensByCategory.map((category, itemTokens) => {
-			const items = itemTokens.map((token) => parseItem(category, token));
+			const items = itemTokens.map((token) => {
+				const item = parseItem(category, token);
+				if (hasUndefinedProperty(item)) {
+					throw new Error("Failed to parse one or more items on the page.");
+				}
+				return item;
+			});
 			return [category, items];
 		});
 	}
@@ -37,4 +43,8 @@ function parseItem(category: ItemCategory, itemToken: ItemToken): Item {
 			// This should never happen if `category` is properly typed
 			throw new Error(`Unknown item category: ${category}`);
 	}
+}
+
+function hasUndefinedProperty(item: Item): boolean {
+	return Object.entries(item).some(([_, value]) => value === undefined);
 }

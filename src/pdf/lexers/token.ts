@@ -1,6 +1,6 @@
 import { Image } from "../model/common";
 
-export type ImageToken = { kind: "Image"; image: Image };
+export type ImageToken = { kind: "Image"; image: Image; y: number };
 export type StringToken = { kind: "String"; string: string; font: string };
 export type Token = ImageToken | StringToken;
 

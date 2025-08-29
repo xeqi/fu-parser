@@ -16,6 +16,7 @@ function parseShield(weaponModuleToken: ItemToken): WeaponModule {
 	const name = weaponModuleStringTokens[0];
 	const cost = convertCosts(weaponModuleStringTokens[1]);
 	const description = parseDescription(weaponModuleToken.strings.slice(4));
+	const isComplex = description.includes("this module enabled cannot have");
 
 	// Accuracy, damage, damage type and category do not matter for shield. We will return some defaults.
 	return {
@@ -32,6 +33,7 @@ function parseShield(weaponModuleToken: ItemToken): WeaponModule {
 		moduleType: "shield",
 		category: "arcane",
 		description: description,
+		isComplex: isComplex,
 	};
 }
 
@@ -65,6 +67,7 @@ function parseWeapon(weaponModuleToken: ItemToken): WeaponModule {
 
 	// We skip index 12(+) this is section separator
 	const description = parseDescription(weaponModuleToken.strings.slice(13 + indexShift));
+	const isComplex = description.includes("this module enabled cannot have");
 
 	return {
 		image: weaponModuleToken.image.image,
@@ -76,6 +79,7 @@ function parseWeapon(weaponModuleToken: ItemToken): WeaponModule {
 		moduleType: distance,
 		category: category,
 		description: description,
+		isComplex: isComplex,
 	};
 }
 

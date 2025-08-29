@@ -3,6 +3,7 @@ import { Armor } from "./armor";
 import { Shield } from "./shield";
 import { Accessory } from "./accessory";
 import { WeaponModule } from "./weapon-module";
+import { ATTR } from "../../external/project-fu";
 
 export type Image = {
 	width: number;
@@ -46,7 +47,6 @@ export const WEAPON_CATEGORIES = [
 	"thrown",
 ] as const;
 
-// TODO should it be here?
 export type TypeCode = (typeof TYPE_CODES)[keyof typeof TYPE_CODES];
 export const TYPE_CODES = {
 	physical: "'",
@@ -72,3 +72,18 @@ export type ItemCategory = (typeof ITEM_CATEGORY)[number];
 export const ITEM_CATEGORY = ["WEAPON", "ARMOR", "SHIELD", "ACCESSORY", "WEAPON MODULE"];
 
 export type Item = Weapon | Armor | Shield | Accessory | WeaponModule;
+
+export const STAT_MAPPING: Record<Stat, ATTR> = {
+	DEX: "dex",
+	MIG: "mig",
+	INS: "ins",
+	WLP: "wlp",
+};
+
+export const AFF_MAPPING: Record<Affinity, number> = {
+	VU: -1,
+	N: 0,
+	RS: 1,
+	IM: 2,
+	AB: 3,
+};
