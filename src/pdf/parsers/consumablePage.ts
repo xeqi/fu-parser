@@ -1,4 +1,3 @@
-import { Image } from "../lexers/token";
 import {
 	Parser,
 	description,
@@ -15,8 +14,7 @@ import {
 	then,
 	watermark,
 } from "./lib";
-
-export type Consumable = { image: Image; name: string; description: string; ipCost: number };
+import { Consumable } from "../model/consumable";
 
 const consumableParser: Parser<Consumable> = fmap(
 	seq(

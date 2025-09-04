@@ -1,9 +1,12 @@
 import fc from "fast-check";
 import { cost, multiString, word, description } from "../arbs/arbs";
-import { flatMap, isResult, prettifyStrings } from "./lib";
-import { Image, Token } from "../lexers/token";
+import { flatMap, isResult } from "./lib";
+import { Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
-import { Consumable, consumablesPage } from "./consumablePage";
+import { consumablesPage } from "./consumablePage";
+import { Consumable } from "../model/consumable";
+import { Image } from "../model/common";
+import { prettifyStrings } from "../parsers-commons";
 
 const consumableDataGen = fc.array(
 	fc.tuple(

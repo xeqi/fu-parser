@@ -1,10 +1,6 @@
-import { Image, Token, isStringToken } from "../lexers/token";
+import { Token, isStringToken } from "../lexers/token";
 import {
-	Accuracy,
-	DamageType,
-	Handed,
 	Parser,
-	Distance,
 	accuracy,
 	alt,
 	cost,
@@ -26,28 +22,14 @@ import {
 	str,
 	text,
 	then,
-	WeaponCategory,
 	fail,
 	nextToken,
 	success,
 	inc,
-	WEAPON_CATEGORIES,
 	watermark,
 } from "./lib";
-
-export type Weapon = {
-	image: Image;
-	name: string;
-	martial: boolean;
-	cost: number;
-	damage: number;
-	accuracy: Accuracy;
-	damageType: DamageType;
-	hands: Handed;
-	melee: Distance;
-	category: WeaponCategory;
-	description: string;
-};
+import { Weapon } from "../model/weapon";
+import { WEAPON_CATEGORIES, WeaponCategory } from "../model/common";
 
 const weaponListingParser = fmap(
 	seq(image, str, martial, cost, accuracy, damage, damageType, kl(hands, sep), kl(melee, sep), description),

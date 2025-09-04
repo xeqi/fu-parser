@@ -1,7 +1,5 @@
-import { Image } from "../lexers/token";
 import { Parser, cost, description, eof, fmap, image, kl, kr, many1, seq, starting, str, then, watermark } from "./lib";
-
-export type Accessory = { image: Image; name: string; description: string; cost: number };
+import { Accessory } from "../model/accessory";
 
 const accessoryParser: Parser<Accessory> = fmap(
 	seq(image, str, cost, description),

@@ -1,11 +1,4 @@
-import { Image } from "../lexers/token";
 import {
-	Accuracy,
-	DamageType,
-	Parser,
-	Distance,
-	ResistanceMap,
-	Stat,
 	accuracy,
 	alt,
 	damage,
@@ -15,7 +8,10 @@ import {
 	image,
 	kl,
 	kr,
+	many,
 	many1,
+	matches,
+	Parser,
 	sep,
 	seq,
 	starting,
@@ -25,69 +21,21 @@ import {
 	text,
 	textWithFont,
 	then,
-	matches,
-	many,
-	DieSize,
-	Affinity,
-	AFFINITIES,
-	TypeCode,
-	DIE_SIZES,
-	DAMAGE_TYPES,
-	TYPE_CODES,
 	watermark,
 } from "./lib";
-
-export type Beast = {
-	image: Image;
-	name: string;
-	level: number;
-	type: string;
-	description: string;
-	traits: string;
-	attributes: {
-		dex: DieSize;
-		ins: DieSize;
-		mig: DieSize;
-		wlp: DieSize;
-		maxHp: number;
-		crisis: number;
-		maxMp: number;
-		init: number;
-		def: number;
-		mdef: number;
-	};
-	resists: ResistanceMap;
-	equipment: string[] | null;
-	attacks: {
-		range: Distance;
-		name: string;
-		accuracy: Accuracy;
-		damage: number;
-		damageType: DamageType | null;
-		description: string;
-	}[];
-	spells: {
-		name: string;
-		accuracy: {
-			primary: Stat;
-			secondary: Stat;
-			bonus: number;
-		} | null;
-		mp: string;
-		target: string;
-		duration: string;
-		description: string;
-		opportunity?: string;
-	}[];
-	otherActions: {
-		name: string;
-		description: string;
-	}[];
-	specialRules: {
-		name: string;
-		description: string;
-	}[];
-};
+import { Beast } from "../model/beast";
+import {
+	AFFINITIES,
+	Affinity,
+	DAMAGE_TYPES,
+	DamageType,
+	DIE_SIZES,
+	DieSize,
+	ResistanceMap,
+	Stat,
+	TYPE_CODES,
+	TypeCode,
+} from "../model/common";
 
 const beastAttribute = (stat: Stat) =>
 	fmap(matches(new RegExp(`^${stat} d(${DIE_SIZES.join("|")})`), stat), (t) =>

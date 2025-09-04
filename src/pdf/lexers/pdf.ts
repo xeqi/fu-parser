@@ -1,6 +1,7 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { Image, Token } from "./token";
+import { Token } from "./token";
 import { DocumentInitParameters, TypedArray } from "pdfjs-dist/types/src/display/api";
+import { Image } from "../model/common";
 
 export const tokenizePDF = async (
 	docId: string | URL | TypedArray | ArrayBuffer | DocumentInitParameters,
@@ -28,7 +29,8 @@ export const tokenizePDF = async (
 							}
 						}
 						if (img && img.height > 0 && img.width > 0) {
-							data.tokens.push({ kind: "Image", image: img });
+							const yPosition = findPreviousTransform(index, opList.fnArray, opList.argsArray);
+							data.tokens.push({ kind: "Image", image: img, y: yPosition });
 						}
 						break;
 					}
@@ -62,3 +64,13 @@ export const tokenizePDF = async (
 		() => doc.destroy(),
 	];
 };
+
+function findPreviousTransform(index: number, fnArray: Array<number>, argsArray: Array<any>): number {
+	for (let i = index - 1; i >= 0; i--) {
+		if (fnArray[i] === pdfjsLib.OPS.transform) {
+			return argsArray[i][5]; // [a, b, c, d, e, f] last one is y
+		}
+	}
+	// Default to 0 if none found
+	return 0;
+}

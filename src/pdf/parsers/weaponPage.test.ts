@@ -1,9 +1,12 @@
 import fc from "fast-check";
 import { cost, word, description } from "../arbs/arbs";
-import { DAMAGE_TYPES, DISTANCES, HANDED, STATS, WEAPON_CATEGORIES, flatMap, isResult, prettifyStrings } from "./lib";
-import { Image, Token } from "../lexers/token";
+import { flatMap, isResult } from "./lib";
+import { Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
-import { Weapon, rareWeapons } from "./weaponPage";
+import { rareWeapons } from "./weaponPage";
+import { Weapon } from "../model/weapon";
+import { DAMAGE_TYPES, DISTANCES, HANDED, Image, STATS, WEAPON_CATEGORIES } from "../model/common";
+import { prettifyStrings } from "../parsers-commons";
 
 const weaponDataGen = fc.record({
 	name: word(),

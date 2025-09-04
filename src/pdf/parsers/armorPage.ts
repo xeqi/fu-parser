@@ -1,4 +1,3 @@
-import { Image } from "../lexers/token";
 import {
 	Parser,
 	alt,
@@ -13,7 +12,6 @@ import {
 	many,
 	many1,
 	martial,
-	prettifyStrings,
 	seq,
 	starting,
 	str,
@@ -22,27 +20,9 @@ import {
 	then,
 	watermark,
 } from "./lib";
+import { Armor, convertDef } from "../model/armor";
+import { prettifyStrings } from "../parsers-commons";
 
-export type Armor = {
-	image: Image;
-	name: string;
-	martial: boolean;
-	cost: number;
-	def: number;
-	mdef: number;
-	init: number;
-	description: string;
-};
-
-const convertDef = (prefix: string) => (s: string) => {
-	if (s.startsWith(prefix + " size")) {
-		const num = s.slice(10);
-		return num === "" ? 0 : Number(num);
-	} else if (s.startsWith(prefix + " die")) {
-		const num = s.slice(9);
-		return num === "" ? 0 : Number(num);
-	} else return s === "-" ? 0 : Number(s);
-};
 const def = fmap(str, convertDef("DEX"));
 const mdef = fmap(str, convertDef("INS"));
 

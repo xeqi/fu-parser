@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import { AFFINITIES } from "../parsers/lib";
+import { AFFINITIES } from "../model/common";
 
 export const word = () => fc.stringMatching(/^\w+$/);
 export const multiString = () => fc.array(fc.stringMatching(/^[a-z]+.*$/), { minLength: 1 });

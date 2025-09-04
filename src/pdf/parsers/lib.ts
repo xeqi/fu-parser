@@ -1,4 +1,6 @@
-import { ImageToken, StringToken, Token, isImageToken, isStringToken } from "../lexers/token";
+import { ImageToken, isImageToken, isStringToken, StringToken, Token } from "../lexers/token";
+import { DamageType, Distance, Handed, isStat, Stat } from "../model/common";
+import { convertCosts, prettifyStrings } from "../parsers-commons";
 
 type PTR = [Token[], number];
 export const nextToken = ([a, i]: PTR): Token | null => a[i];
@@ -156,52 +158,6 @@ export const sep = textWithFont("w", [/Wingdings-Regular$/]);
 export const matches = (r: RegExp, errorMsg: string) =>
 	fmap(satisfy((t) => isStringToken(t) && r.test(t.string), errorMsg) as Parser<StringToken>, (t) => t.string);
 
-export type Distance = (typeof DISTANCES)[number];
-export const DISTANCES = ["melee", "ranged"] as const;
-export type Handed = (typeof HANDED)[number];
-export const HANDED = ["one-handed", "two-handed"] as const;
-export type WeaponCategory = (typeof WEAPON_CATEGORIES)[number];
-export const WEAPON_CATEGORIES = [
-	"arcane",
-	"bow",
-	"brawling",
-	"dagger",
-	"firearm",
-	"flail",
-	"heavy",
-	"spear",
-	"sword",
-	"thrown",
-] as const;
-
-export type Stat = (typeof STATS)[number];
-export const STATS = ["DEX", "MIG", "INS", "WLP"] as const;
-const isStat = (s: string): s is Stat => {
-	return (STATS as readonly string[]).includes(s);
-};
-
-export type TypeCode = (typeof TYPE_CODES)[keyof typeof TYPE_CODES];
-export const TYPE_CODES = {
-	physical: "'",
-	air: "a",
-	bolt: "b",
-	dark: "a",
-	earth: "E",
-	fire: "f",
-	ice: "i",
-	light: "l",
-	poison: "b",
-} as const;
-
-export type DamageType = (typeof DAMAGE_TYPES)[number];
-export const DAMAGE_TYPES = ["physical", "air", "bolt", "dark", "earth", "fire", "ice", "light", "poison"] as const;
-
-export type Affinity = (typeof AFFINITIES)[number];
-export const AFFINITIES = ["VU", "N", "RS", "IM", "AB"] as const;
-
-export type ResistanceMap = Record<DamageType, Affinity>;
-export type Accuracy = { primary: Stat; secondary: Stat; bonus: number };
-
 const bonus = alt(
 	fmap(satisfy((t) => isStringToken(t) && /\+\d*/.test(t.string), "Accuracy bonus") as Parser<StringToken>, (t) =>
 		Number(t.string.slice(1)),
@@ -251,32 +207,10 @@ export const martial = alt(
 	fmap(textWithFont("E", [/FnT_BasicShapes1$/]), (_e) => true),
 	success(false),
 );
-const convertCosts = (s: string) => {
-	if (s.endsWith(" z")) {
-		return Number(s.slice(0, -2));
-	} else if (s === "-") {
-		return 0;
-	} else {
-		return Number(s);
-	}
-};
+
 export const cost = fmap(strWithFont([/PTSans-Narrow$/]), convertCosts);
 
 export const dashOrNumber = (errorMsg: string) =>
 	fmap(matches(/^((\+|-)?[0-9]+)|-$/, errorMsg), (s: string) => (s === "-" ? 0 : Number(s)));
-
-export type DieSize = (typeof DIE_SIZES)[number];
-export const DIE_SIZES = [6, 8, 10, 12] as const;
-
-export const prettifyStrings = (lines: string[]): string => {
-	return lines.reduce((acc, line) => {
-		const s = line.trim();
-		if (/^[.?!]/.test(s)) {
-			return acc + s;
-		} else {
-			return acc + " " + s;
-		}
-	}, "");
-};
 
 export const watermark = strWithFont([/Helvetica$/]);
