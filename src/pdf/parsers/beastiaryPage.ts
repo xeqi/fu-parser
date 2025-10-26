@@ -132,7 +132,10 @@ const beastSpells = kr(
 					fmap(str, (s) => s.slice(0, -3)),
 				),
 				kr(sep, str),
-				kr(sep, kl(str, text("."))),
+				kr(
+					sep,
+					fmap(kl(str, text(".")), (s) => s.toLowerCase().replace(/\s+/g, "-")),
+				),
 				description,
 				alt(opportunity, success(null)),
 			),
