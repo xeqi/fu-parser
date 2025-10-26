@@ -917,7 +917,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							mpCost: { value: (pcSpell.mp ?? 0).toString() },
 							maxTargets: { value: (pcSpell.maxTargets ?? 1).toString() },
 							target: { value: (pcSpell.targetDesc ?? "").toString() },
-							duration: { value: pcSpell.duration ?? "" },
+							duration: { value: (pcSpell.duration ?? "").toLowerCase() },
 							isOffensive: { value: pcSpell.isOffensive === true },
 							hasRoll: { value: pcSpell.isOffensive === true },
 							rollInfo:
@@ -1327,7 +1327,7 @@ const importFultimatorNPC = async (data: Npc) => {
 			system: {
 				mpCost: { value: spell.mp },
 				target: { value: spell.target },
-				duration: { value: spell.duration },
+				duration: { value: (spell.duration || "").toLowerCase() },
 				isOffensive: { value: spell.type == "offensive" },
 				hasRoll: { value: spell.type == "offensive" },
 				rollInfo:
