@@ -38,6 +38,15 @@ export function slugify(input: string) {
 	return slugged;
 }
 
+export function parseMarkdown(input: string | null | undefined): string {
+	if (!input) {
+		return "";
+	}
+	const boldRegex = /\*\*(.*?)\*\*/g;
+	const italicRegex = /\*(.*?)\*/g;
+	return input.replace(boldRegex, "<strong>$1</strong>").replace(italicRegex, "<em>$1</em>").replace(/\n/g, "<br>");
+}
+
 interface BondInput {
 	name: string;
 	admInf: "Admiration" | "Inferiority" | "";
@@ -109,11 +118,11 @@ const importFultimatorWeapon = async (data: PCWeapon) => {
 			damage: { value: data.damage },
 			type: { value: isRanged ? "ranged" : "melee" },
 			damageType: { value: ELEMENTS_MAPPING[type] },
-			description: "",
+			description: parseMarkdown(data.quality || ""),
 			isBehavior: false,
 			cost: { value: data.cost },
 			weight: { value: 1 },
-			quality: { value: data.quality },
+			quality: { value: "" },
 			isMartial: { value: data.martial },
 			category: { value: CATEGORY_MAPPING[category] },
 			hands: { value: data.hands === 1 ? "one-handed" : "two-handed" },
@@ -132,10 +141,10 @@ const importFultimatorShield = async (data: PCShield) => {
 		type: "shield" as const,
 		name: data.name !== "" ? data.name : "Unnamed data",
 		system: {
-			description: "",
+			description: parseMarkdown(data.quality || ""),
 			cost: { value: data.cost },
 			isMartial: { value: data.martial },
-			quality: { value: data.quality },
+			quality: { value: "" },
 			isEquipped: { value: false, slot: "" },
 			def: { value: data.def + defMod },
 			mdef: { value: data.mdef + mDefMod },
@@ -159,11 +168,11 @@ const importFultimatorArmor = async (data: PCArmor) => {
 			def: { value: data.def + defMod, attribute: "dex" },
 			mdef: { value: data.mdef + mDefMod, attribute: "ins" },
 			init: { value: data.init + initMod },
-			description: "",
+			description: parseMarkdown(data.quality || ""),
 			isBehavior: false,
 			cost: { value: data.cost },
 			weight: { value: 1 },
-			quality: { value: data.quality },
+			quality: { value: "" },
 			isMartial: { value: data.martial },
 		},
 	};
@@ -182,11 +191,11 @@ const importFultimatorAccessory = async (data: PCAccessory) => {
 			def: { value: defMod | 0 },
 			mdef: { value: mDefMod | 0 },
 			init: { value: initMod | 0 },
-			description: "",
+			description: parseMarkdown(data.quality || ""),
 			isBehavior: false,
 			cost: { value: data.cost },
 			weight: { value: 1 },
-			quality: { value: data.quality },
+			quality: { value: "" },
 			isMartial: { value: false },
 		},
 	};
@@ -331,7 +340,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 					spell: 0,
 				},
 			},
-			description: data.info.description || "",
+			description: parseMarkdown(data.info.description) || "",
 		},
 		type: "character",
 		name: data.name != "" ? data.name : "Unnamed NPC",
@@ -414,7 +423,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 						type: "skill",
 						name: skillName,
 						system: {
-							description: skill.description,
+							description: parseMarkdown(skill.description),
 							level: { value: skill.currentLvl, max: skill.maxLvl },
 						},
 					};
@@ -447,7 +456,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				system: {
 					subtype: { value: "skill" },
 					class: { value: cls.name },
-					description: cls.heroic.description,
+					description: parseMarkdown(cls.heroic.description),
 				},
 			};
 		}),
@@ -510,8 +519,8 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 								},
 								featureType: "projectfu.arcanum",
 								data: {
-									merge: `<p>${pcSpell.mergeDesc || pcSpell.merge || ""}</p>`,
-									dismiss: `<p>${pcSpell.dismissDesc || pcSpell.domainDesc || ""}</p>`,
+									merge: `<p>${parseMarkdown(pcSpell.mergeDesc || pcSpell.merge || "")}</p>`,
+									dismiss: `<p>${parseMarkdown(pcSpell.dismissDesc || pcSpell.domainDesc || "")}</p>`,
 									domains: pcSpell.domain || "",
 								},
 								source: "",
@@ -540,9 +549,9 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 								},
 								featureType: "projectfu-playtest.arcanum2",
 								data: {
-									merge: `<p>${pcSpell.mergeDesc || pcSpell.merge || ""}</p>`,
-									dismiss: `<p>${pcSpell.dismissDesc || pcSpell.dismiss || ""}</p>`,
-									pulse: `<p>${pcSpell.pulseDesc || pcSpell.pulse || ""}</p>`,
+									merge: `<p>${parseMarkdown(pcSpell.mergeDesc || pcSpell.merge || "")}</p>`,
+									dismiss: `<p>${parseMarkdown(pcSpell.dismissDesc || pcSpell.dismiss || "")}</p>`,
+									pulse: `<p>${parseMarkdown(pcSpell.pulseDesc || pcSpell.pulse || "")}</p>`,
 									domains: pcSpell.domain || "",
 								},
 								source: "",
@@ -671,7 +680,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 										summary: { value: "" },
 										featureType: "projectfu.tone",
 										data: {
-											description: tone.effect || "",
+											description: parseMarkdown(tone.effect) || "",
 										},
 										source: "",
 									},
@@ -784,7 +793,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 										featureType: "projectfu.dance",
 										data: {
 											duration: durationMap[dance.duration || ""] || dance.duration || "",
-											description: dance.effect || "",
+											description: parseMarkdown(dance.effect || ""),
 										},
 										source: "",
 									},
@@ -878,7 +887,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 										summary: { value: "" },
 										featureType: "projectfu.symbol",
 										data: {
-											description: symbol.effect || "",
+											description: parseMarkdown(symbol.effect || ""),
 										},
 										source: "",
 									},
@@ -930,7 +939,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 											accuracy: { value: 0 },
 										}
 									: undefined,
-							description: pcSpell.description || "",
+							description:  parseMarkdown(pcSpell.description || ""),
 							isBehavior: false,
 							weight: { value: 1 },
 							quality: { value: "" },
@@ -949,7 +958,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		const baseNote: FUItem = {
 			name: getName(note.name, "Unnamed Note"),
 			system: {
-				description: note.description,
+				description: parseMarkdown(note.description),
 				isBehavior: false,
 				weight: { value: 1 },
 				hasClock: { value: false },
@@ -997,11 +1006,11 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				damage: { value: weapon.damage },
 				type: { value: weapon.ranged ? "ranged" : "melee" },
 				damageType: { value: ELEMENTS_MAPPING[type] },
-				description: "",
+				description: parseMarkdown(weapon.quality || ""),
 				isBehavior: false,
 				cost: { value: weapon.cost },
 				weight: { value: 1 },
-				quality: { value: weapon.quality },
+				quality: { value: "" },
 				isMartial: { value: weapon.martial },
 				category: { value: CATEGORY_MAPPING[category] },
 				hands: { value: weapon.hands === 1 ? "one-handed" : "two-handed" },
@@ -1021,11 +1030,11 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				def: { value: armor.def + defMod },
 				mdef: { value: armor.mdef + mDefMod },
 				init: { value: armor.init + initMod },
-				description: "",
+				description: parseMarkdown(armor.quality || ""),
 				isBehavior: false,
 				cost: { value: armor.cost },
 				weight: { value: 1 },
-				quality: { value: armor.quality },
+				quality: { value: "" },
 				isMartial: { value: armor.martial },
 			},
 		};
@@ -1042,11 +1051,11 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				def: { value: shield.def + defMod },
 				mdef: { value: shield.mdef + mDefMod },
 				init: { value: shield.init + initMod },
-				description: "",
+				description: parseMarkdown(shield.quality || ""),
 				isBehavior: false,
 				cost: { value: shield.cost },
 				weight: { value: 1 },
-				quality: { value: shield.quality },
+				quality: { value: "" },
 				isMartial: { value: shield.martial },
 			},
 		};
@@ -1063,11 +1072,11 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				def: { value: defMod },
 				mdef: { value: mDefMod },
 				init: { value: initMod },
-				description: "",
+				description: parseMarkdown(accessory.quality || ""),
 				isBehavior: false,
 				cost: { value: accessory.cost },
 				weight: { value: 1 },
-				quality: { value: accessory.quality },
+				quality: { value: "" },
 				isMartial: { value: false },
 			},
 		};
@@ -1083,7 +1092,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				name: quirk.name !== "" ? quirk.name : "Unnamed quirk",
 				system: {
 					optionalType: "projectfu.quirk",
-					data: { description: (quirk.description || "") + "<br>" + (quirk.effect || "") },
+					data: { description: parseMarkdown(quirk.description || "") + "<br>" + (quirk.effect || "") },
 				},
 			})),
 		);
@@ -1245,7 +1254,7 @@ const importFultimatorNPC = async (data: Npc) => {
 			isChampion: { value: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1 },
 			isCompanion: { value: data.rank == "companion" },
 			study: { value: 0 as const },
-			description: data.description || "",
+			description: parseMarkdown(data.description || ""),
 		},
 		type: "npc",
 		name: data.name != "" ? data.name : "Unnamed NPC",
@@ -1278,10 +1287,10 @@ const importFultimatorNPC = async (data: Npc) => {
 				},
 				type: { value: attack.range == "distance" ? "ranged" : "melee" },
 				damageType: { value: ELEMENTS_MAPPING[attack.type] },
-				quality: { value: attack.special.join(" ") },
+				quality: { value: "" },
 				isBehavior: false,
 				weight: { value: 1 },
-				description: "",
+				description: parseMarkdown(attack.special.join(" "))
 			},
 		};
 	});
@@ -1312,10 +1321,10 @@ const importFultimatorNPC = async (data: Npc) => {
 				},
 				type: { value: attack.weapon.range == "distance" ? "ranged" : "melee" },
 				damageType: { value: ELEMENTS_MAPPING[type] },
-				description: "",
+				description: parseMarkdown(attack.special.join(" ")),
 				isBehavior: false,
 				weight: { value: 1 },
-				quality: { value: attack.special.join(" ") },
+				quality: { value: "" },
 			},
 		};
 	});
@@ -1342,7 +1351,7 @@ const importFultimatorNPC = async (data: Npc) => {
 								},
 							}
 						: undefined,
-				description: spell.effect,
+				description: parseMarkdown(spell.effect),
 				isBehavior: false,
 				weight: { value: 1 },
 				quality: { value: "" },
@@ -1354,7 +1363,7 @@ const importFultimatorNPC = async (data: Npc) => {
 		return {
 			name: oa.name != "" ? oa.name : "Unnamed Other Action",
 			system: {
-				description: oa.effect,
+				description: parseMarkdown(oa.effect || ""),
 				isBehavior: false,
 				weight: { value: 1 },
 				hasClock: { value: false },
@@ -1368,7 +1377,7 @@ const importFultimatorNPC = async (data: Npc) => {
 		return {
 			name: sr.name != "" ? sr.name : "Unnamed Special Rule",
 			system: {
-				description: sr.effect,
+				description: parseMarkdown(sr.effect || ""),
 				isBehavior: false,
 				weight: { value: 1 },
 				hasClock: { value: false },
@@ -1381,7 +1390,7 @@ const importFultimatorNPC = async (data: Npc) => {
 		return {
 			name: sr.name != "" ? sr.name : "Unnamed Rare Gear",
 			system: {
-				description: sr.effect,
+				description: parseMarkdown(sr.effect || ""),
 				isBehavior: false,
 				weight: { value: 1 },
 				hasClock: { value: false },
@@ -1394,7 +1403,7 @@ const importFultimatorNPC = async (data: Npc) => {
 		return {
 			name: sr.name != "" ? sr.name : "Unnamed Note",
 			system: {
-				description: sr.effect,
+				description: parseMarkdown(sr.effect || ""),
 				isBehavior: false,
 				weight: { value: 1 },
 				hasClock: { value: false },
