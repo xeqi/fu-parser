@@ -117,6 +117,7 @@ export type NpcSpell = {
 	attr1: Attributes;
 	attr2: Attributes;
 	mp?: string;
+	maxTargets: number;
 	special: string[];
 };
 

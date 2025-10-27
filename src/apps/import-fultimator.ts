@@ -918,11 +918,39 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							return compendiumItem;
 						}
 					}
+					// Map target description to targeting rule
+					const getTargetingFromTarget = (target: string, maxTargets: number) => {
+						const lowerTarget = target.toLowerCase();
+
+						if (lowerTarget.includes("self") || lowerTarget === "you") {
+							return "self";
+						} else if (lowerTarget.includes("weapon")) {
+							return "weapon";
+						} else if (lowerTarget.includes("special")) {
+							return "special";
+						} else if (maxTargets > 1 || lowerTarget.includes("up to")) {
+							return "multiple";
+						} else {
+							return "single";
+						}
+					};
+
+					const targetingRule = getTargetingFromTarget(pcSpell.targetDesc ?? "", pcSpell.maxTargets ?? 1);
+					const perTargetCost = (pcSpell.maxTargets ?? 1) > 1;
 					// Fallback if not found in compendium
 					return {
 						type: "spell",
 						name: spellName,
 						system: {
+							cost: {
+								resource: "mp",
+								amount: pcSpell.mp ?? 0,
+								perTarget: perTargetCost,
+							},
+							targeting: {
+								rule: targetingRule,
+								max: pcSpell.maxTargets ?? 1,
+							},
 							mpCost: { value: (pcSpell.mp ?? 0).toString() },
 							maxTargets: { value: (pcSpell.maxTargets ?? 1).toString() },
 							target: { value: (pcSpell.targetDesc ?? "").toString() },
@@ -939,7 +967,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 											accuracy: { value: 0 },
 										}
 									: undefined,
-							description:  parseMarkdown(pcSpell.description || ""),
+							description: parseMarkdown(pcSpell.description || ""),
 							isBehavior: false,
 							weight: { value: 1 },
 							quality: { value: "" },
@@ -1290,7 +1318,7 @@ const importFultimatorNPC = async (data: Npc) => {
 				quality: { value: "" },
 				isBehavior: false,
 				weight: { value: 1 },
-				description: parseMarkdown(attack.special.join(" "))
+				description: parseMarkdown(attack.special.join(" ")),
 			},
 		};
 	});
@@ -1330,10 +1358,38 @@ const importFultimatorNPC = async (data: Npc) => {
 	});
 
 	const spellItems = (data.spells || []).map((spell) => {
+		// Map target description to targeting rule
+		const getTargetingFromTarget = (target: string, maxTargets: number) => {
+			const lowerTarget = target.toLowerCase();
+
+			if (lowerTarget.includes("self") || lowerTarget === "you") {
+				return "self";
+			} else if (lowerTarget.includes("weapon")) {
+				return "weapon";
+			} else if (lowerTarget.includes("special")) {
+				return "special";
+			} else if (maxTargets > 1 || lowerTarget.includes("up to")) {
+				return "multiple";
+			} else {
+				return "single";
+			}
+		};
+
+		const targetingRule = getTargetingFromTarget(spell.target ?? "", spell.maxTargets ?? 1);
+		const perTargetCost = (spell.maxTargets ?? 1) > 1;
 		return {
 			type: "spell" as const,
 			name: spell.name != "" ? spell.name : "Unnamed Spell",
 			system: {
+				cost: {
+					resource: "mp",
+					amount: spell.mp ?? 0,
+					perTarget: perTargetCost,
+				},
+				targeting: {
+					rule: targetingRule,
+					max: spell.maxTargets ?? 1,
+				},
 				mpCost: { value: spell.mp },
 				target: { value: spell.target },
 				duration: { value: (spell.duration || "").toLowerCase() },

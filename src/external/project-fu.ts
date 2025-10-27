@@ -309,6 +309,15 @@ export type FUItem = Item &
 				system: Base &
 					RollInfo &
 					HasBehavior & {
+						cost?: {
+							resource?: "mp" | "hp" | "ip";
+							amount?: number;
+							perTarget?: boolean;
+						};
+						targeting?: {
+							rule?: string;
+							max?: number;
+						};
 						mpCost: { value: string };
 						maxTargets?: { value: string };
 						target: { value: string };
@@ -323,6 +332,15 @@ export type FUItem = Item &
 				system: Base &
 					RollInfo &
 					HasBehavior & {
+						cost: {
+							resource: "mp" | "hp" | "ip";
+							amount: number;
+							perTarget: boolean;
+						};
+						targeting: {
+							rule: string;
+							max?: number;
+						};
 						mpCost: { value: string };
 						maxTargets?: { value: string };
 						target: { value: string };
