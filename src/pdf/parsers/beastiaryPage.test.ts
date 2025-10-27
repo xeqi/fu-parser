@@ -75,7 +75,7 @@ const beastiaryDataGen = fc.array(
 				),
 				mp: fc.string(),
 				target: fc.string(),
-				duration: fc.string(),
+				duration: fc.string().map((s) => s.toLowerCase()),
 				description: description(),
 				opportunity: fc.option(description()),
 			}),
