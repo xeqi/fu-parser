@@ -102,6 +102,87 @@ const lookupAffinity = (affinity?: Affinities) => {
 
 const getName = (name?: string, fallback = "Unnamed") => name?.trim() || fallback;
 
+const parseMpCost = (mp: string | number | undefined) => {
+	if (typeof mp === "string") {
+		const perTargetRegex = /(\d+)\s*(x|×)\s*T/i;
+		const match = mp.match(perTargetRegex);
+		if (match) {
+			return { amount: parseInt(match[1], 10), perTarget: true };
+		}
+		const numericMp = parseInt(mp, 10);
+		if (!isNaN(numericMp)) {
+			return { amount: numericMp, perTarget: false };
+		}
+	}
+	if (typeof mp === "number") {
+		return { amount: mp, perTarget: false };
+	}
+	return { amount: 0, perTarget: false };
+};
+
+const getTargetingFromFultimatorTarget = (
+	target: string | undefined,
+): { rule: string; max: number; success: boolean } => {
+	const fultimatorTarget = (target || "").toLowerCase();
+	let rule = "single";
+	let max = 1;
+	let success = false;
+
+	if (fultimatorTarget.includes("self")) {
+		rule = "self";
+		success = true;
+	} else if (fultimatorTarget.includes("one creature")) {
+		rule = "single";
+		success = true;
+	} else if (fultimatorTarget.includes("up to two creatures")) {
+		rule = "multiple";
+		max = 2;
+		success = true;
+	} else if (fultimatorTarget.includes("up to three creatures")) {
+		rule = "multiple";
+		max = 3;
+		success = true;
+	} else if (fultimatorTarget.includes("up to four creatures")) {
+		rule = "multiple";
+		max = 4;
+		success = true;
+	} else if (fultimatorTarget.includes("up to five creatures")) {
+		rule = "multiple";
+		max = 5;
+		success = true;
+	} else if (fultimatorTarget.includes("one equipped weapon")) {
+		rule = "weapon";
+		success = true;
+	} else if (fultimatorTarget.includes("special")) {
+		rule = "special";
+		success = true;
+	}
+
+	return { rule, max, success };
+};
+
+const determineTargeting = (targetDesc: string | undefined, maxTargetsVal: number | undefined) => {
+	let targetingRule: string;
+	let maxTargets: number;
+
+	if (targetDesc) {
+		const fromString = getTargetingFromFultimatorTarget(targetDesc);
+		if (fromString.success) {
+			targetingRule = fromString.rule;
+			maxTargets = fromString.max;
+			return { targetingRule, maxTargets };
+		}
+	}
+
+	maxTargets = maxTargetsVal ?? 1;
+	if (maxTargets > 1) {
+		targetingRule = "multiple";
+	} else {
+		targetingRule = "single";
+	}
+	return { targetingRule, maxTargets };
+};
+
 const importFultimatorWeapon = async (data: PCWeapon) => {
 	const type = data.type;
 	const category = data.category;
@@ -496,7 +577,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 			if (!cls.spells || cls.spells.length === 0) return [];
 			const items = await Promise.all(
 				(cls.spells || []).map(async (pcSpell): Promise<FUItem | FUItem[] | null> => {
-					const spellName = getName(pcSpell.name, "Unnamed Spell");
+					const spellName = getName(pcSpell.name || pcSpell.spellName, "Unnamed Spell");
 
 					// Handle arcanist spell type as classFeature
 					if (pcSpell.spellType === "arcanist") {
@@ -918,25 +999,9 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							return compendiumItem;
 						}
 					}
-					// Map target description to targeting rule
-					const getTargetingFromTarget = (target: string, maxTargets: number) => {
-						const lowerTarget = target.toLowerCase();
-
-						if (lowerTarget.includes("self") || lowerTarget === "you") {
-							return "self";
-						} else if (lowerTarget.includes("weapon")) {
-							return "weapon";
-						} else if (lowerTarget.includes("special")) {
-							return "special";
-						} else if (maxTargets > 1 || lowerTarget.includes("up to")) {
-							return "multiple";
-						} else {
-							return "single";
-						}
-					};
-
-					const targetingRule = getTargetingFromTarget(pcSpell.targetDesc ?? "", pcSpell.maxTargets ?? 1);
-					const perTargetCost = (pcSpell.maxTargets ?? 1) > 1;
+					const { targetingRule, maxTargets } = determineTargeting(pcSpell.targetDesc, pcSpell.maxTargets);
+					const mpCostResult = parseMpCost(pcSpell.mp);
+					const perTargetCost = maxTargets > 1 || mpCostResult.perTarget;
 					// Fallback if not found in compendium
 					return {
 						type: "spell",
@@ -944,14 +1009,14 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 						system: {
 							cost: {
 								resource: "mp",
-								amount: pcSpell.mp ?? 0,
+								amount: mpCostResult.amount,
 								perTarget: perTargetCost,
 							},
 							targeting: {
 								rule: targetingRule,
-								max: pcSpell.maxTargets ?? 1,
+								max: maxTargets,
 							},
-							mpCost: { value: (pcSpell.mp ?? 0).toString() },
+							mpCost: { value: (pcSpell.mp ?? "").toString() },
 							maxTargets: { value: (pcSpell.maxTargets ?? 1).toString() },
 							target: { value: (pcSpell.targetDesc ?? "").toString() },
 							duration: { value: (pcSpell.duration ?? "").toLowerCase() },
@@ -1358,37 +1423,21 @@ const importFultimatorNPC = async (data: Npc) => {
 	});
 
 	const spellItems = (data.spells || []).map((spell) => {
-		// Map target description to targeting rule
-		const getTargetingFromTarget = (target: string, maxTargets: number) => {
-			const lowerTarget = target.toLowerCase();
-
-			if (lowerTarget.includes("self") || lowerTarget === "you") {
-				return "self";
-			} else if (lowerTarget.includes("weapon")) {
-				return "weapon";
-			} else if (lowerTarget.includes("special")) {
-				return "special";
-			} else if (maxTargets > 1 || lowerTarget.includes("up to")) {
-				return "multiple";
-			} else {
-				return "single";
-			}
-		};
-
-		const targetingRule = getTargetingFromTarget(spell.target ?? "", spell.maxTargets ?? 1);
-		const perTargetCost = (spell.maxTargets ?? 1) > 1;
+		const { targetingRule, maxTargets } = determineTargeting(spell.target, spell.maxTargets);
+		const mpCostResult = parseMpCost(spell.mp);
+		const perTargetCost = maxTargets > 1 || mpCostResult.perTarget;
 		return {
 			type: "spell" as const,
 			name: spell.name != "" ? spell.name : "Unnamed Spell",
 			system: {
 				cost: {
 					resource: "mp",
-					amount: spell.mp ?? 0,
+					amount: mpCostResult.amount,
 					perTarget: perTargetCost,
 				},
 				targeting: {
 					rule: targetingRule,
-					max: spell.maxTargets ?? 1,
+					max: maxTargets,
 				},
 				mpCost: { value: spell.mp },
 				target: { value: spell.target },

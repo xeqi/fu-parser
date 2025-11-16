@@ -117,7 +117,7 @@ export type NpcSpell = {
 	attr1: Attributes;
 	attr2: Attributes;
 	mp?: string;
-	maxTargets: number;
+	maxTargets?: number;
 	special: string[];
 };
 
@@ -323,7 +323,8 @@ export interface PCHeroicSkills {
 
 export type PCSpells = {
 	name?: string;
-	mp?: number;
+	spellName?: string;
+	mp?: number | string;
 	maxTargets?: number;
 	targetDesc?: string;
 	description?: string;
