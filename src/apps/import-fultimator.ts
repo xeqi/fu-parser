@@ -10,12 +10,28 @@ import {
 	PCBond,
 	WeaponCategory,
 	PCWeapon,
+	PCCustomWeapon,
 	PCShield,
 	PCArmor,
 	PCAccessory,
 } from "../external/fultimator";
-import { ATTR, CATEGORY, FUActor, FUItem, FUActorPC } from "../external/project-fu";
+import { ATTR, CATEGORY, FUActor, FUItem, FUActorPC, VehicleFrameFeature } from "../external/project-fu";
 import { DamageType } from "../pdf/model/common";
+
+const mapAttribute = (attr: string | undefined): ATTR => {
+	const attrMap: Record<string, ATTR> = {
+		dexterity: "dex",
+		insight: "ins",
+		might: "mig",
+		will: "wlp",
+		willpower: "wlp",
+		dex: "dex",
+		ins: "ins",
+		mig: "mig",
+		wlp: "wlp",
+	};
+	return attrMap[attr?.toLowerCase() || "dex"] || "dex";
+};
 
 /**
  * Takes an input and returns the slugged string of it.
@@ -212,6 +228,158 @@ const importFultimatorWeapon = async (data: PCWeapon) => {
 	};
 	const item = await Item.create(payload);
 	console.log("Item created:", item);
+};
+
+const importFultimatorCustomWeapon = async (data: PCCustomWeapon) => {
+	const mapCustomizationName = (name: string): string => {
+		const nameMap: Record<string, string> = {
+			weapon_customization_accurate: "Accurate",
+			weapon_customization_defenseboost: "Defense Boost",
+			weapon_customization_elemental: "Elemental",
+			weapon_customization_magicdefenseboost: "Magic Defense Boost",
+			weapon_customization_powerful: "Powerful",
+			weapon_customization_powerful_effect: "Powerful",
+			weapon_customization_quick: "Quick",
+			weapon_customization_transforming: "Transforming",
+		};
+		return nameMap[name] || name;
+	};
+
+	// Helper to map category strings to CATEGORY type
+	const mapCategoryString = (cat: string): CATEGORY => {
+		const categoryMap: Record<string, CATEGORY> = {
+			weapon_category_arcane: "arcane",
+			weapon_category_bow: "bow",
+			weapon_category_flail: "flail",
+			weapon_category_firearm: "firearm",
+			weapon_category_spear: "spear",
+			weapon_category_thrown: "thrown",
+			weapon_category_heavy: "heavy",
+			weapon_category_dagger: "dagger",
+			weapon_category_brawling: "brawling",
+			weapon_category_sword: "sword",
+		};
+		return categoryMap[cat] || "brawling";
+	};
+
+	// Calculate total modifiers from customizations
+	const calculateModifiers = (customizations: typeof data.customizations, category: string) => {
+		let damageBonus = 0;
+		let accuracyBonus = 0;
+		let defBonus = 0;
+		let mdefBonus = 0;
+
+		for (const custom of customizations) {
+			if (custom.name.includes("accurate")) accuracyBonus += 2;
+			if (custom.name.includes("magicdefenseboost")) {
+				mdefBonus += 2;
+			} else if (custom.name.includes("defenseboost")) {
+				defBonus += 2;
+			}
+			if (custom.name.includes("elemental")) damageBonus += 2;
+			if (custom.name.includes("powerful")) damageBonus += category === "weapon_category_heavy" ? 7 : 5;
+		}
+
+		return { damageBonus, accuracyBonus, defBonus, mdefBonus };
+	};
+
+	// Check if weapon is transforming
+	const isTransforming =
+		data.customizations.some((c) => c.name.includes("transforming")) ||
+		(data.secondCurrentCustomizations || []).some((c) => c.name.includes("transforming"));
+
+	// Check if weapon is martial (base weapon or any customization in either form)
+	const isMartial =
+		data.martial ||
+		data.customizations.some((c) => c.martial) ||
+		(data.secondCurrentCustomizations || []).some((c) => c.martial);
+
+	const primaryModifiers = calculateModifiers(data.customizations || [], data.category);
+	const secondaryModifiers = calculateModifiers(data.secondCurrentCustomizations || [], data.secondSelectedCategory);
+
+	// Determine primary form range type
+	const primaryRange = data.range === "weapon_range_ranged" ? "ranged" : "melee";
+	const secondaryRange = data.secondSelectedRange === "weapon_range_ranged" ? "ranged" : "melee";
+
+	// Map damage types
+	const mapDamageType = (type: Elements): DamageType => {
+		return ELEMENTS_MAPPING[type] || "physical";
+	};
+
+	// Build description from quality and customizations
+	let description = data.quality || "";
+
+	// Add primary form customizations
+	if (data.customizations.length > 0) {
+		description += "\n\n**Primary Form Customizations:**\n";
+		description += data.customizations.map((c) => `- ${mapCustomizationName(c.name)}`).join("\n");
+	}
+
+	// Add secondary form customizations for transforming weapons
+	if (isTransforming && (data.secondCurrentCustomizations || []).length > 0) {
+		description += "\n\n**Secondary Form Customizations:**\n";
+		description += (data.secondCurrentCustomizations || [])
+			.map((c) => `- ${mapCustomizationName(c.name)}`)
+			.join("\n");
+	}
+
+	const payload: FUItem = {
+		type: "customWeapon" as const,
+		name: data.name || "Unnamed Custom Weapon",
+		system: {
+			description: parseMarkdown(description),
+			fuid: slugify(data.name || "custom-weapon"),
+			isFavored: { value: false },
+			showTitleCard: { value: false },
+			cost: data.cost + data.qualityCost,
+			isMartial: isMartial,
+			defense: "def",
+			isTransforming: isTransforming,
+			activeForm: "primaryForm",
+			primaryForm: {
+				def: (data.defModifier || 0) + primaryModifiers.defBonus,
+				mdef: (data.mDefModifier || 0) + primaryModifiers.mdefBonus,
+				attributes: {
+					primary: mapAttribute(data.accuracyCheck.att1),
+					secondary: mapAttribute(data.accuracyCheck.att2),
+				},
+				accuracy: data.precModifier + primaryModifiers.accuracyBonus,
+				damage: {
+					value: 5 + data.damageModifier + primaryModifiers.damageBonus,
+					type: mapDamageType(data.overrideDamageType ? data.customDamageType : data.type),
+				},
+				type: primaryRange,
+				category: mapCategoryString(data.category),
+				name: data.name || "",
+			},
+			secondaryForm: {
+				def: (data.secondDefModifier || 0) + secondaryModifiers.defBonus,
+				mdef: (data.secondMDefModifier || 0) + secondaryModifiers.mdefBonus,
+				attributes: {
+					primary: mapAttribute(data.secondSelectedAccuracyCheck.att1),
+					secondary: mapAttribute(data.secondSelectedAccuracyCheck.att2),
+				},
+				accuracy: data.secondPrecModifier + secondaryModifiers.accuracyBonus,
+				damage: {
+					value: 5 + data.secondDamageModifier + secondaryModifiers.damageBonus,
+					type: mapDamageType(
+						data.secondOverrideDamageType ? data.secondCustomDamageType : data.secondSelectedType,
+					),
+				},
+				type: secondaryRange,
+				category: mapCategoryString(data.secondSelectedCategory),
+				name: data.secondWeaponName || "",
+			},
+			traits: [],
+			slots: "alpha",
+			items: [],
+			summary: "",
+			quality: data.quality,
+		},
+	};
+
+	const item = await Item.create(payload);
+	console.log("Custom weapon created:", item);
 };
 
 const importFultimatorShield = async (data: PCShield) => {
@@ -886,6 +1054,791 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 						return danceItems.length > 0 ? danceItems : null;
 					}
 
+					if (pcSpell.spellType === "gift") {
+						const giftItems: FUItem[] = [];
+
+						// Gift FUID mappings for compendium lookup
+						const giftFuidMap: Record<string, string> = {
+							esper_gift_atmokinesis: "atmokinesis",
+							esper_gift_clairvoyance: "clairvoyance",
+							esper_gift_gravitokinesis: "gravitokinesis",
+							esper_gift_life_transference: "life-transference",
+							esper_gift_photokinesis: "photokinesis",
+							esper_gift_psychic_backlash: "psychic-backlash",
+							esper_gift_psychic_shield: "psychic-shield",
+							esper_gift_reassuring_presence: "reassuring-presence",
+							esper_gift_thermokinesis: "thermokinesis",
+						};
+
+						// Gift display name mappings
+						const giftDisplayMap: Record<string, string> = {
+							esper_gift_atmokinesis: "Atmokinesis",
+							esper_gift_clairvoyance: "Clairvoyance",
+							esper_gift_gravitokinesis: "Gravitokinesis",
+							esper_gift_life_transference: "Life Transference",
+							esper_gift_photokinesis: "Photokinesis",
+							esper_gift_psychic_backlash: "Psychic Backlash",
+							esper_gift_psychic_shield: "Psychic Shield",
+							esper_gift_reassuring_presence: "Reassuring Presence",
+							esper_gift_thermokinesis: "Thermokinesis",
+						};
+
+						// Process gifts
+						if (pcSpell.gifts) {
+							for (const gift of pcSpell.gifts) {
+								const giftName =
+									gift.name === "esper_gift_custom_name"
+										? gift.customName || "Custom Gift"
+										: giftDisplayMap[gift.name] || gift.name;
+
+								if (preferCompendium && giftFuidMap[gift.name]) {
+									const fuid = giftFuidMap[gift.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										giftItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for gifts not found in compendium or custom gifts
+								giftItems.push({
+									type: "classFeature",
+									name: giftName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid:
+											gift.name === "esper_gift_custom_name"
+												? giftName.toLowerCase().replace(/\s+/g, "-")
+												: gift.name,
+										summary: { value: "" },
+										featureType: "projectfu.psychicGift",
+										data: {
+											trigger: parseMarkdown(gift.event || ""),
+											description: parseMarkdown(gift.effect || ""),
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all gift items
+						return giftItems.length > 0 ? giftItems : null;
+					}
+
+					// Handle therioform spell type
+					if (pcSpell.spellType === "therioform") {
+						const therioformItems: FUItem[] = [];
+
+						// Therioform FUID mappings for compendium lookup
+						const therioformFuidMap: Record<string, string> = {
+							mutant_therioform_amphibia: "amphibia",
+							mutant_therioform_arpaktida: "arpaktida",
+							mutant_therioform_dynamotheria: "dynamotheria",
+							mutant_therioform_electrophora: "electrophora",
+							mutant_therioform_neurophagoida: "neurophagoida",
+							mutant_therioform_placophora: "placophora",
+							mutant_therioform_pneumophora: "pneumophora",
+							mutant_therioform_polypoda: "polypoda",
+							mutant_therioform_pterotheria: "pterotheria",
+							mutant_therioform_pyrophora: "pyrophora",
+							mutant_therioform_tachytheria: "tachytheria",
+							mutant_therioform_toxicophora: "toxicophora",
+						};
+
+						// Therioform display name mappings
+						const therioformDisplayMap: Record<string, string> = {
+							mutant_therioform_amphibia: "Amphibia",
+							mutant_therioform_arpaktida: "Arpaktida",
+							mutant_therioform_dynamotheria: "Dynamotheria",
+							mutant_therioform_electrophora: "Electrophora",
+							mutant_therioform_neurophagoida: "Neurophagoida",
+							mutant_therioform_placophora: "Placophora",
+							mutant_therioform_pneumophora: "Pneumophora",
+							mutant_therioform_polypoda: "Polypoda",
+							mutant_therioform_pterotheria: "Pterotheria",
+							mutant_therioform_pyrophora: "Pyrophora",
+							mutant_therioform_tachytheria: "Tachytheria",
+							mutant_therioform_toxicophora: "Toxicophora",
+						};
+
+						// Process therioforms
+						if (pcSpell.therioforms) {
+							for (const therioform of pcSpell.therioforms) {
+								const therioformName =
+									therioform.name === "mutant_therioform_custom_name"
+										? therioform.customName || "Custom Therioform"
+										: therioformDisplayMap[therioform.name] || therioform.name;
+
+								if (preferCompendium && therioformFuidMap[therioform.name]) {
+									const fuid = therioformFuidMap[therioform.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										therioformItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for therioforms not found in compendium or custom therioforms
+								therioformItems.push({
+									type: "classFeature",
+									name: therioformName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid:
+											therioform.name === "mutant_therioform_custom_name"
+												? therioformName.toLowerCase().replace(/\s+/g, "-")
+												: therioform.name,
+										summary: { value: therioform.genoclepsis || "" },
+										featureType: "projectfu.therioform",
+										data: {
+											description: parseMarkdown(therioform.description || ""),
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all therioform items
+						return therioformItems.length > 0 ? therioformItems : null;
+					}
+
+					// Handle invocation spell type
+					if (pcSpell.spellType === "invocation") {
+						const invocationItems: FUItem[] = [];
+
+						// Map skill level number to rank string
+						const mapSkillLevelToRank = (
+							level: number | undefined,
+						): "basic" | "advanced" | "superior" | undefined => {
+							if (level === 1) return "basic";
+							if (level === 2) return "advanced";
+							if (level === 3) return "superior";
+							return undefined;
+						};
+
+						// Process invocations
+						if (preferCompendium) {
+							const fuid = "invocations";
+							const innerfuid = "inner-wellspring";
+
+							// Add the main invocations skill
+							const skillCompendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+							if (skillCompendiumItem) {
+								const itemCopy = duplicate(skillCompendiumItem);
+								const rank = mapSkillLevelToRank(pcSpell.skillLevel);
+								if (
+									rank &&
+									itemCopy.type === "classFeature" &&
+									itemCopy.system.featureType !== "projectfu.weaponModule" &&
+									itemCopy.system.data &&
+									"level" in itemCopy.system.data
+								) {
+									itemCopy.system.data.level = rank;
+									invocationItems.push(itemCopy as FUItem);
+								}
+							}
+
+							// Check for Inner Wellspring
+							if (pcSpell.innerWellspring === true && pcSpell.chosenWellspring) {
+								const heroicCompendiumItem = await lookupInCompendium(
+									"projectfu.heroic-skills",
+									innerfuid,
+								);
+								if (heroicCompendiumItem) {
+									const heroicCopy = duplicate(heroicCompendiumItem);
+
+									if (heroicCopy.type === "heroic") {
+										const wellspringLower = pcSpell.chosenWellspring.toLowerCase();
+										const itemWithEffects = heroicCopy as FUItem & {
+											effects?: Array<{ name?: string; disabled: boolean }>;
+										};
+
+										// Find and enable the matching effect
+										if (itemWithEffects.effects && Array.isArray(itemWithEffects.effects)) {
+											for (const effect of itemWithEffects.effects) {
+												if (
+													effect.name &&
+													effect.name.toLowerCase().includes(wellspringLower)
+												) {
+													effect.disabled = false;
+												} else {
+													// Ensure other wellspring effects remain disabled
+													effect.disabled = true;
+												}
+											}
+										}
+									}
+
+									invocationItems.push(heroicCopy as FUItem);
+								}
+							}
+						}
+
+						// Return all invocation items
+						return invocationItems.length > 0 ? invocationItems : null;
+					}
+
+					// Handle magiseed spell type
+					if (pcSpell.spellType === "magiseed") {
+						const magiseedItems: FUItem[] = [];
+
+						// Magiseed FUID mappings for compendium lookup
+						const magiseedFuidMap: Record<string, string> = {
+							magiseed_arctic_narcissus: "arctic-narcissus",
+							magiseed_blazing_chrysanthemum: "blazing-chrysanthemum",
+							magiseed_desert_dahlia: "desert-dahlia",
+							magiseed_golden_ginkgo: "golden-ginkgo",
+							magiseed_grave_asphodel: "grave-asphodel",
+							magiseed_hermit_iris: "hermit-iris",
+							magiseed_hookleaf_nightshade: "hookleaf-nightshade",
+							magiseed_horned_hawthorn: "horned-hawthorn",
+							magiseed_lunar_magnolia: "lunar-magnolia",
+							magiseed_ocean_lotus: "ocean-lotus",
+							magiseed_pilgrim_gazalia: "pilgrim-gazalia",
+							magiseed_prancing_dandelion: "prancing-dandelion",
+							magiseed_regal_protea: "regal-protea",
+							magiseed_remedy_lily: "remedy-lily",
+							magiseed_serrated_rose: "serrated-rose",
+							magiseed_silver_strelitzia: "silver-strelitzia",
+							magiseed_star_peony: "star-peony",
+							magiseed_striped_orchid: "striped-orchid",
+							magiseed_wardwattle: "wardwattle",
+							magiseed_wrathful_carnation: "wrathful-carnation",
+						};
+
+						// Magiseed display name mappings
+						const magiseedDisplayMap: Record<string, string> = {
+							magiseed_arctic_narcissus: "Arctic Narcissus",
+							magiseed_blazing_chrysanthemum: "Blazing Chrysanthemum",
+							magiseed_desert_dahlia: "Desert Dahlia",
+							magiseed_golden_ginkgo: "Golden Ginkgo",
+							magiseed_grave_asphodel: "Grave Asphodel",
+							magiseed_hermit_iris: "Hermit Iris",
+							magiseed_hookleaf_nightshade: "Hookleaf Nightshade",
+							magiseed_horned_hawthorn: "Horned Hawthorn",
+							magiseed_lunar_magnolia: "Lunar Magnolia",
+							magiseed_ocean_lotus: "Ocean Lotus",
+							magiseed_pilgrim_gazalia: "Pilgrim Gazalia",
+							magiseed_prancing_dandelion: "Prancing Dandelion",
+							magiseed_regal_protea: "Regal Protea",
+							magiseed_remedy_lily: "Remedy Lily",
+							magiseed_serrated_rose: "Serrated Rose",
+							magiseed_silver_strelitzia: "Silver Strelitzia",
+							magiseed_star_peony: "Star Peony",
+							magiseed_striped_orchid: "Striped Orchid",
+							magiseed_wardwattle: "Wardwattle",
+							magiseed_wrathful_carnation: "Wrathful Carnation",
+						};
+
+						if (preferCompendium) {
+							// Add the garden skill item
+							const gardenFuid = "garden";
+							const gardenCompendiumItem = await lookupInCompendium("projectfu.skills", gardenFuid);
+							if (gardenCompendiumItem) {
+								const gardenCopy = duplicate(gardenCompendiumItem);
+								if (
+									gardenCopy.type === "classFeature" &&
+									gardenCopy.system.featureType !== "projectfu.weaponModule"
+								) {
+									magiseedItems.push(gardenCopy as FUItem);
+								}
+							}
+						}
+
+						// Process magiseeds from magiseeds
+						if (pcSpell.magiseeds && Array.isArray(pcSpell.magiseeds)) {
+							for (const magiseed of pcSpell.magiseeds) {
+								const magiseedName =
+									magiseed.name === "magiseed_custom"
+										? magiseed.customName || "Custom Magiseed"
+										: magiseedDisplayMap[magiseed.name] || magiseed.name;
+
+								// Check if it's a custom magiseed
+								if (magiseed.name === "magiseed_custom") {
+									// Build effects array for custom magiseed
+									const effectsArray: Array<{ start: number; end: number; effect: string }> = [];
+
+									if (magiseed.effects) {
+										// Convert effects object to array format
+										const sortedKeys = Object.keys(magiseed.effects)
+											.map(Number)
+											.sort((a, b) => a - b);
+
+										for (const key of sortedKeys) {
+											const effectText = magiseed.effects[key.toString()];
+											if (effectText) {
+												effectsArray.push({
+													start: key,
+													end: key + 1,
+													effect: effectText,
+												});
+											}
+										}
+									}
+
+									// Create custom magiseed item
+									magiseedItems.push({
+										type: "classFeature",
+										name: magiseedName,
+										img: "icons/svg/item-bag.svg",
+										system: {
+											fuid: magiseedName.toLowerCase().replace(/\s+/g, "-"),
+											summary: { value: magiseed.description || "" },
+											featureType: "projectfu.magiseed",
+											data: {
+												effectCount: effectsArray.length,
+												effects: effectsArray,
+											},
+											source: "",
+										},
+									});
+									continue;
+								}
+
+								// Handle non-custom magiseeds from compendium
+								if (preferCompendium && magiseedFuidMap[magiseed.name]) {
+									const fuid = magiseedFuidMap[magiseed.name];
+									const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+									if (compendiumItem) {
+										magiseedItems.push(compendiumItem);
+										continue;
+									}
+								}
+
+								// Fallback for magiseeds not found in compendium
+								let effectDescription = "";
+								if (magiseed.effects) {
+									const effectEntries = Object.entries(magiseed.effects)
+										.filter(([_, value]) => value)
+										.map(([key, value]) => `**Level ${key}**: ${value}`)
+										.join("\n\n");
+									effectDescription = effectEntries;
+								}
+
+								magiseedItems.push({
+									type: "classFeature",
+									name: magiseedName,
+									img: "icons/svg/item-bag.svg",
+									system: {
+										fuid: magiseed.name,
+										summary: { value: magiseed.description || "" },
+										featureType: "projectfu.magiseed",
+										data: {
+											description: parseMarkdown(effectDescription),
+										},
+										source: "",
+									},
+								});
+							}
+						}
+
+						// Return all magiseed items
+						return magiseedItems.length > 0 ? magiseedItems : null;
+					}
+
+					if (pcSpell.spellType === "cooking") {
+						const cookingItems: FUItem[] = [];
+						const fuid = "cookbook";
+						const allYouCanEatFuid = "all-you-can-eat";
+
+						if (preferCompendium) {
+							// Add the cookbook skill item
+							const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
+							if (compendiumItem) {
+								const cookbookCopy = duplicate(compendiumItem);
+
+								if (
+									cookbookCopy.type === "classFeature" &&
+									cookbookCopy.system.featureType === "projectfu.cookbook" &&
+									cookbookCopy.system.data.combinations &&
+									pcSpell.cookbookEffects &&
+									typeof pcSpell.cookbookEffects === "object" &&
+									!Array.isArray(pcSpell.cookbookEffects)
+								) {
+									// Iterate over the cookbookEffects object entries
+									for (const [key, cookbookEffect] of Object.entries(pcSpell.cookbookEffects)) {
+										if (cookbookCopy.system.data.combinations[key]) {
+											let effectText = cookbookEffect.effect || "";
+
+											// Append custom choices if they exist
+											if (
+												cookbookEffect.customChoices &&
+												Object.keys(cookbookEffect.customChoices).length > 0
+											) {
+												const choiceValues = Object.values(cookbookEffect.customChoices);
+												effectText += "\n\n**Choice:** " + choiceValues.join(", ");
+											}
+
+											// Update the effect with custom text
+											cookbookCopy.system.data.combinations[key].effect =
+												parseMarkdown(effectText);
+										}
+									}
+
+									cookingItems.push(cookbookCopy as FUItem);
+								} else if (
+									cookbookCopy.type === "classFeature" &&
+									cookbookCopy.system.featureType !== "projectfu.weaponModule"
+								) {
+									// Add cookbook without modifications if no custom effects
+									cookingItems.push(cookbookCopy as FUItem);
+								}
+							}
+						}
+
+						// Check if All You Can Eat is true and add item from compendium
+						if (pcSpell.allYouCanEat === true && preferCompendium) {
+							const heroicCompendiumItem = await lookupInCompendium(
+								"projectfu.heroic-skills",
+								allYouCanEatFuid,
+							);
+							if (heroicCompendiumItem) {
+								const heroicCopy = duplicate(heroicCompendiumItem);
+								if (heroicCopy.type === "heroic") {
+									cookingItems.push(heroicCopy as FUItem);
+								}
+							}
+						}
+
+						// Import individual ingredients from inventory
+						if (
+							pcSpell.ingredientInventory &&
+							Array.isArray(pcSpell.ingredientInventory) &&
+							preferCompendium
+						) {
+							for (const ingredient of pcSpell.ingredientInventory) {
+								// Look up ingredient by taste (which matches the fuid)
+								const ingredientCompendiumItem = await lookupInCompendium(
+									"projectfu.skills",
+									ingredient.taste,
+								);
+
+								if (ingredientCompendiumItem) {
+									const ingredientCopy = duplicate(ingredientCompendiumItem);
+
+									// Update quantity from the ingredient inventory
+									if (
+										ingredientCopy.type === "classFeature" &&
+										ingredientCopy.system.featureType === "projectfu.ingredient"
+									) {
+										const ingredientData = ingredientCopy.system.data as {
+											taste: string;
+											quantity: number;
+											description?: string;
+											cost?: number | null;
+										};
+
+										// Always set the quantity from the inventory
+										if (ingredient.quantity !== undefined) {
+											ingredientData.quantity = ingredient.quantity;
+										}
+									}
+
+									cookingItems.push(ingredientCopy as FUItem);
+								}
+							}
+						}
+
+						// Return all cooking items
+						return cookingItems.length > 0 ? cookingItems : null;
+					}
+
+					if (pcSpell.spellType === "pilot-vehicle") {
+						const vehicleItems: FUItem[] = [];
+
+						// Support FUID mappings for compendium lookup
+						const supportFuidMap: Record<string, string> = {
+							pilot_module_aerial: "aerial-module",
+							"pilot_module_anti-element": "anti-element-module",
+							pilot_module_advanced_targeting: "advanced-targeting-module",
+							pilot_module_counterstrike: "counterstrike-module",
+							pilot_module_excavation: "excavation-module",
+							pilot_module_expanded_plating: "expanded-plating-module",
+							pilot_module_magistatic: "magistatic-module",
+							pilot_module_power: "power-module",
+							pilot_module_rapid_interface: "rapid-interface-module",
+							pilot_module_seafarer: "seafarer-module",
+							pilot_module_seat: "seat-module",
+							pilot_module_secondary_offensive: "secondary-offensive-module",
+							pilot_module_sensor: "sensor-module",
+							pilot_module_turbo: "turbo-module",
+						};
+
+						const weaponFuidMap: Record<string, string> = {
+							pilot_module_arcane: "arcane-module",
+							pilot_module_axe: "axe-module",
+							pilot_module_blade: "blade-module",
+							pilot_module_bow: "bow-module",
+							pilot_module_cannon: "cannon-module",
+							pilot_module_claw: "claw-module",
+							pilot_module_claymore: "claymore-module",
+							pilot_module_esoteric: "esoteric-module",
+							pilot_module_flail: "flail-module",
+							pilot_module_flamer: "flamer-module",
+							pilot_module_machine_gun: "machine-gun-module",
+							pilot_module_rifle: "rifle-module",
+							pilot_module_scythe: "scythe-module",
+							pilot_module_shield: "shield-module",
+							pilot_module_spear: "spear-module",
+							pilot_module_sword: "sword-module",
+							pilot_module_trident: "trident-module",
+						};
+
+						const frameFuidMap: Record<string, string> = {
+							pilot_frame_exoskeleton: "exoskeleton",
+							pilot_frame_mecha: "mecha",
+							pilot_frame_steed: "steed",
+						};
+
+						const armorFuidMap: Record<string, string> = {
+							pilot_module_flexible_plating: "flexible-plating-module",
+							pilot_module_heavy_plating: "heavy-plating-module",
+							pilot_module_runic_plating: "runic-plating-module",
+							pilot_module_standard_plating: "standard-plating-module",
+						};
+
+						// Display name mappings
+						const supportDisplayMap: Record<string, string> = {
+							pilot_module_aerial: "Aerial Module",
+							"pilot_module_anti-element": "Anti-Element Module",
+							pilot_module_advanced_targeting: "Advanced Targeting Module",
+							pilot_module_counterstrike: "Counterstrike Module",
+							pilot_module_excavation: "Excavation Module",
+							pilot_module_expanded_plating: "Expanded Plating Module",
+							pilot_module_magistatic: "Magistatic Module",
+							pilot_module_power: "Power Module",
+							pilot_module_rapid_interface: "Rapid Interface Module",
+							pilot_module_seafarer: "Seafarer Module",
+							pilot_module_seat: "Seat Module",
+							pilot_module_secondary_offensive: "Secondary Offensive Module",
+							pilot_module_sensor: "Sensor Module",
+							pilot_module_turbo: "Turbo Module",
+						};
+
+						const weaponDisplayMap: Record<string, string> = {
+							pilot_module_arcane: "Arcane Module",
+							pilot_module_axe: "Axe Module",
+							pilot_module_blade: "Blade Module",
+							pilot_module_bow: "Bow Module",
+							pilot_module_cannon: "Cannon Module",
+							pilot_module_claw: "Claw Module",
+							pilot_module_claymore: "Claymore Module",
+							pilot_module_esoteric: "Esoteric Module",
+							pilot_module_flail: "Flail Module",
+							pilot_module_flamer: "Flamer Module",
+							pilot_module_machine_gun: "Machine Gun Module",
+							pilot_module_rifle: "Rifle Module",
+							pilot_module_scythe: "Scythe Module",
+							pilot_module_shield: "Shield Module",
+							pilot_module_spear: "Spear Module",
+							pilot_module_sword: "Sword Module",
+							pilot_module_trident: "Trident Module",
+						};
+
+						const frameDisplayMap: Record<string, string> = {
+							pilot_frame_exoskeleton: "Exoskeleton",
+							pilot_frame_mecha: "Mecha",
+							pilot_frame_steed: "Steed",
+						};
+
+						const armorDisplayMap: Record<string, string> = {
+							pilot_module_flexible_plating: "Flexible Plating Module",
+							pilot_module_heavy_plating: "Heavy Plating Module",
+							pilot_module_runic_plating: "Runic Plating Module",
+							pilot_module_standard_plating: "Standard Plating Module",
+						};
+
+						// Process vehicles
+						if (pcSpell.vehicles) {
+							for (const vehicle of pcSpell.vehicles) {
+								// Process the vehicle frame
+
+								if (preferCompendium && frameFuidMap[vehicle.frame]) {
+									const fuid = frameFuidMap[vehicle.frame] || slugify(frameDisplayMap[vehicle.frame]);
+									const compendiumFrame = await lookupInCompendium("projectfu.vehicle-modules", fuid);
+									if (compendiumFrame) {
+										if (
+											compendiumFrame.type === "classFeature" &&
+											compendiumFrame.system.featureType === "projectfu.vehicle"
+										) {
+											// TypeScript now knows this is the vehicle variant
+											const vehicleData = compendiumFrame.system.data as VehicleFrameFeature;
+											vehicleData.moduleSlots = vehicle.maxEnabledModules || 3;
+											vehicleItems.push(compendiumFrame);
+										}
+									}
+								}
+
+								// Process ALL modules
+								if (vehicle.modules) {
+									for (const module of vehicle.modules) {
+										// Process weapon modules
+										if (module.type === "pilot_module_weapon") {
+											const weaponName =
+												module.customName || weaponDisplayMap[module.name] || module.name;
+
+											if (preferCompendium && weaponFuidMap[module.name]) {
+												const fuid = weaponFuidMap[module.name];
+												const compendiumWeapon = await lookupInCompendium(
+													"projectfu.vehicle-modules",
+													fuid,
+												);
+												if (compendiumWeapon) {
+													vehicleItems.push(compendiumWeapon);
+													continue;
+												}
+											}
+
+											// Fallback or custom weapon
+											const damageType = module.damageType?.toLowerCase() || "physical";
+											const totalCost = (module.cost || 0) + (module.qualityCost || 0);
+											vehicleItems.push({
+												type: "classFeature",
+												name: weaponName,
+												img: "systems/projectfu/styles/static/compendium/weapon-modules/blade-module.png",
+												system: {
+													fuid:
+														module.name === "pilot_custom_weapon"
+															? weaponName.toLowerCase().replace(/\s+/g, "-")
+															: module.name,
+													summary: { value: "" },
+													featureType: "projectfu.weaponModule",
+													cost: { value: totalCost },
+													data: {
+														quality: module.quality || "",
+														description: parseMarkdown(module.description || ""),
+														accuracy: {
+															attr1: mapAttribute(module.att1),
+															attr2: mapAttribute(module.att2),
+															modifier: module.prec || 0,
+															defense: "def",
+														},
+														damage: {
+															bonus: module.damage || 0,
+															type: damageType,
+														},
+														type:
+															module.range === "Ranged"
+																? "ranged"
+																: module.isShield
+																	? "shield"
+																	: "melee",
+														category:
+															module.category?.toLowerCase() === "spear_category"
+																? "spear"
+																: module.category?.toLowerCase() || "brawling",
+														complex: module.cumbersome || false,
+														shield: module.isShield
+															? {
+																	defense: 2,
+																	magicDefense: 2,
+																}
+															: undefined,
+													},
+													source: "",
+												},
+											});
+										}
+
+										// Process armor modules
+										if (module.type === "pilot_module_armor") {
+											const armorName =
+												module.customName || armorDisplayMap[module.name] || module.name;
+
+											if (preferCompendium && armorFuidMap[module.name]) {
+												const fuid = armorFuidMap[module.name];
+												const compendiumArmor = await lookupInCompendium(
+													"projectfu.vehicle-modules",
+													fuid,
+												);
+												if (compendiumArmor) {
+													vehicleItems.push(compendiumArmor);
+													continue;
+												}
+											}
+
+											// Fallback or custom armor
+											const totalCost = (module.cost || 0) + (module.qualityCost || 0);
+											vehicleItems.push({
+												type: "classFeature",
+												name: armorName,
+												img: "icons/equipment/chest/breastplate-banded-steel.webp",
+												system: {
+													fuid:
+														module.name === "pilot_custom_armor"
+															? armorName.toLowerCase().replace(/\s+/g, "-")
+															: module.name,
+													summary: { value: "" },
+													featureType: "projectfu.armorModule",
+													cost: { value: totalCost },
+													data: {
+														martial: module.martial || false,
+														quality: module.quality || "",
+														defense: {
+															modifier: module.def || 0,
+															attribute: "dex",
+														},
+														magicDefense: {
+															modifier: module.mdef || 0,
+															attribute: "ins",
+														},
+														description: parseMarkdown(module.description || ""),
+													},
+													source: "",
+												},
+											});
+										}
+
+										// Process support modules
+										if (module.type === "pilot_module_support") {
+											const supportName =
+												module.customName || supportDisplayMap[module.name] || module.name;
+
+											if (preferCompendium && supportFuidMap[module.name]) {
+												const fuid = supportFuidMap[module.name];
+												const compendiumSupport = await lookupInCompendium(
+													"projectfu.vehicle-modules",
+													fuid,
+												);
+												if (compendiumSupport) {
+													vehicleItems.push(compendiumSupport);
+													continue;
+												}
+											}
+
+											// Fallback or custom support
+											const totalCost = (module.cost || 0) + (module.qualityCost || 0);
+											vehicleItems.push({
+												type: "classFeature",
+												name: supportName,
+												img: "icons/commodities/tech/cog-brass.webp",
+												system: {
+													fuid:
+														module.name === "pilot_custom_support"
+															? supportName.toLowerCase().replace(/\s+/g, "-")
+															: module.name,
+													summary: { value: "" },
+													featureType: "projectfu.supportModule",
+													cost: { value: totalCost },
+													data: {
+														description: parseMarkdown(module.description || ""),
+														complex: module.isComplex || false,
+													},
+													source: "",
+												},
+											});
+										}
+									}
+								}
+							}
+						}
+
+						// Return all vehicle items
+						return vehicleItems.length > 0 ? vehicleItems : null;
+					}
+
 					// Handle symbol spell type
 					if (pcSpell.spellType === "symbol") {
 						const symbolItems: FUItem[] = [];
@@ -1175,6 +2128,159 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		};
 	});
 
+	const customWeaponItems = (data.customWeapons || []).map((customWeapon): FUItem => {
+		const mapCustomizationName = (name: string): string => {
+			const nameMap: Record<string, string> = {
+				weapon_customization_accurate: "Accurate",
+				weapon_customization_defenseboost: "Defense Boost",
+				weapon_customization_elemental: "Elemental",
+				weapon_customization_magicdefenseboost: "Magic Defense Boost",
+				weapon_customization_powerful: "Powerful",
+				weapon_customization_powerful_effect: "Powerful",
+				weapon_customization_quick: "Quick",
+				weapon_customization_transforming: "Transforming",
+			};
+			return nameMap[name] || name;
+		};
+
+		// Helper to map category strings to CATEGORY type
+		const mapCategoryString = (cat: string): CATEGORY => {
+			const categoryMap: Record<string, CATEGORY> = {
+				weapon_category_arcane: "arcane",
+				weapon_category_bow: "bow",
+				weapon_category_flail: "flail",
+				weapon_category_firearm: "firearm",
+				weapon_category_spear: "spear",
+				weapon_category_thrown: "thrown",
+				weapon_category_heavy: "heavy",
+				weapon_category_dagger: "dagger",
+				weapon_category_brawling: "brawling",
+				weapon_category_sword: "sword",
+			};
+			return categoryMap[cat] || "brawling";
+		};
+
+		// Calculate total modifiers from customizations
+		const calculateModifiers = (customizations: typeof customWeapon.customizations, category: string) => {
+			let damageBonus = 0;
+			let accuracyBonus = 0;
+			let defBonus = 0;
+			let mdefBonus = 0;
+
+			for (const custom of customizations) {
+				if (custom.name.includes("accurate")) accuracyBonus += 2;
+				if (custom.name.includes("magicdefenseboost")) {
+					mdefBonus += 2;
+				} else if (custom.name.includes("defenseboost")) {
+					defBonus += 2;
+				}
+				if (custom.name.includes("elemental")) damageBonus += 2;
+				if (custom.name.includes("powerful")) damageBonus += category === "weapon_category_heavy" ? 7 : 5;
+			}
+
+			return { damageBonus, accuracyBonus, defBonus, mdefBonus };
+		};
+
+		const isTransforming =
+			customWeapon.customizations.some((c) => c.name.includes("transforming")) ||
+			(customWeapon.secondCurrentCustomizations || []).some((c) => c.name.includes("transforming"));
+
+		// Check if weapon is martial (base weapon or any customization in either form)
+		const isMartial =
+			customWeapon.martial ||
+			customWeapon.customizations.some((c) => c.martial) ||
+			(customWeapon.secondCurrentCustomizations || []).some((c) => c.martial);
+
+		const primaryModifiers = calculateModifiers(customWeapon.customizations, customWeapon.category);
+		const secondaryModifiers = calculateModifiers(
+			customWeapon.secondCurrentCustomizations || [],
+			customWeapon.secondSelectedCategory,
+		);
+
+		const primaryRange = customWeapon.range === "weapon_range_ranged" ? "ranged" : "melee";
+		const secondaryRange = customWeapon.secondSelectedRange === "weapon_range_ranged" ? "ranged" : "melee";
+
+		const mapDamageType = (type: Elements): DamageType => {
+			return ELEMENTS_MAPPING[type] || "physical";
+		};
+
+		// Build description from quality and customizations
+		let description = customWeapon.quality || "";
+
+		// Add primary form customizations
+		if (customWeapon.customizations.length > 0) {
+			description += "\n\n**Primary Form Customizations:**\n";
+			description += customWeapon.customizations.map((c) => `- ${mapCustomizationName(c.name)}`).join("\n");
+		}
+
+		// Add secondary form customizations for transforming weapons
+		if (isTransforming && customWeapon.secondCurrentCustomizations.length > 0) {
+			description += "\n\n**Secondary Form Customizations:**\n";
+			description += customWeapon.secondCurrentCustomizations
+				.map((c) => `- ${mapCustomizationName(c.name)}`)
+				.join("\n");
+		}
+
+		return {
+			type: "customWeapon" as const,
+			name: customWeapon.name || "Unnamed Custom Weapon",
+			system: {
+				fuid: slugify(customWeapon.name || "custom-weapon"),
+				isFavored: { value: false },
+				showTitleCard: { value: false },
+				cost: customWeapon.cost + customWeapon.qualityCost,
+				isMartial: isMartial,
+				defense: "def",
+				isTransforming: isTransforming,
+				activeForm: "primaryForm",
+				primaryForm: {
+					def: (customWeapon.defModifier || 0) + primaryModifiers.defBonus,
+					mdef: (customWeapon.mDefModifier || 0) + primaryModifiers.mdefBonus,
+					attributes: {
+						primary: mapAttribute(customWeapon.accuracyCheck.att1),
+						secondary: mapAttribute(customWeapon.accuracyCheck.att2),
+					},
+					accuracy: customWeapon.precModifier + primaryModifiers.accuracyBonus,
+					damage: {
+						value: 5 + customWeapon.damageModifier + primaryModifiers.damageBonus,
+						type: mapDamageType(
+							customWeapon.overrideDamageType ? customWeapon.customDamageType : customWeapon.type,
+						),
+					},
+					type: primaryRange,
+					category: mapCategoryString(customWeapon.category),
+					name: customWeapon.name || "",
+				},
+				secondaryForm: {
+					def: (customWeapon.secondDefModifier || 0) + secondaryModifiers.defBonus,
+					mdef: (customWeapon.secondMDefModifier || 0) + secondaryModifiers.mdefBonus,
+					attributes: {
+						primary: mapAttribute(customWeapon.secondSelectedAccuracyCheck.att1),
+						secondary: mapAttribute(customWeapon.secondSelectedAccuracyCheck.att2),
+					},
+					accuracy: customWeapon.secondPrecModifier + secondaryModifiers.accuracyBonus,
+					damage: {
+						value: 5 + customWeapon.secondDamageModifier + secondaryModifiers.damageBonus,
+						type: mapDamageType(
+							customWeapon.secondOverrideDamageType
+								? customWeapon.secondCustomDamageType
+								: customWeapon.secondSelectedType,
+						),
+					},
+					type: secondaryRange,
+					category: mapCategoryString(customWeapon.secondSelectedCategory),
+					name: customWeapon.secondWeaponName || "",
+				},
+				traits: [],
+				slots: "alpha",
+				items: [],
+				summary: "",
+				quality: customWeapon.quality,
+				description: parseMarkdown(description),
+			},
+		};
+	});
+
 	const quirkItems: FUItem[] = [];
 	if (data.quirk) {
 		// Handle both single quirk object and array of quirks
@@ -1195,6 +2301,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 	const actor = await Actor.create(payload);
 	await actor.createEmbeddedDocuments("Item", [
 		...weaponItems,
+		...customWeaponItems,
 		...armorItems,
 		...shieldItems,
 		...accessoryItems,
@@ -1541,6 +2648,7 @@ enum DataType {
 	Pc = "pc",
 	Class = "class",
 	PCWeapon = "weapon",
+	PCCustomWeapon = "customWeapon",
 	PCArmor = "armor",
 	PCShield = "shield",
 	PCAccessory = "accessory",
@@ -1553,7 +2661,7 @@ type FultimatorSubmissionData = {
 };
 
 type FultimatorImportData = FultimatorSubmissionData & {
-	parse?: Npc | Player | PCWeapon | PCShield | PCArmor | PCAccessory;
+	parse?: Npc | Player | PCWeapon | PCCustomWeapon | PCShield | PCArmor | PCAccessory;
 	error?: string;
 	inProgress: boolean;
 	dataType?: DataType;
@@ -1583,6 +2691,9 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 					case DataType.PCWeapon:
 						this.object.parse = json.assertParse<PCWeapon>(this.object.text);
 						break;
+					case DataType.PCCustomWeapon:
+						this.object.parse = json.assertParse<PCCustomWeapon>(this.object.text);
+						break;
 					case DataType.PCShield:
 						this.object.parse = json.assertParse<PCShield>(this.object.text);
 						break;
@@ -1603,7 +2714,17 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 	detectDataType(text: string): DataType | undefined {
 		if (/"dataType"\s*:\s*"npc"/i.test(text)) return DataType.Npc;
 		if (/"dataType"\s*:\s*"pc"/i.test(text)) return DataType.Pc;
-		if (/"dataType"\s*:\s*"weapon"/i.test(text)) return DataType.PCWeapon;
+		// if (/"dataType"\s*:\s*"weapon"/i.test(text)) return DataType.PCWeapon;
+		// if (/"dataType"\s*:\s*"customWeapon"/i.test(text)) return DataType.PCCustomWeapon;
+		// Check for weapon dataType
+		if (/"dataType"\s*:\s*"weapon"/i.test(text)) {
+			// If it has customizations field, it's a custom weapon
+			if (/"customizations"\s*:\s*\[/i.test(text)) {
+				return DataType.PCCustomWeapon;
+			}
+			// Otherwise it's a regular weapon
+			return DataType.PCWeapon;
+		}
 		if (/"dataType"\s*:\s*"shield"/i.test(text)) return DataType.PCShield;
 		if (/"dataType"\s*:\s*"armor"/i.test(text)) return DataType.PCArmor;
 		if (/"dataType"\s*:\s*"accessory"/i.test(text)) return DataType.PCAccessory;
@@ -1641,6 +2762,9 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 							break;
 						case DataType.PCWeapon:
 							await importFultimatorWeapon(this.object.parse as PCWeapon);
+							break;
+						case DataType.PCCustomWeapon:
+							await importFultimatorCustomWeapon(this.object.parse as PCCustomWeapon);
 							break;
 						case DataType.PCShield:
 							await importFultimatorShield(this.object.parse as PCShield);

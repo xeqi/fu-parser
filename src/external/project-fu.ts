@@ -206,23 +206,53 @@ type Bonds = {
 	strength: number;
 };
 
-type WeaponModuleFeature = {
-	type: ModuleType;
+// Vehicle-related type definitions
+export type VehicleFrameFeature = {
+	frame: string;
+	passengers: number;
+	distanceMultiplier: number;
+	moduleSlots: number;
+	description: string;
+};
+
+export type WeaponModuleFeature = {
+	quality: string;
 	description: string;
 	accuracy: {
 		attr1: ATTR;
 		attr2: ATTR;
 		modifier: number;
+		defense: string;
 	};
 	damage: {
-		type: DamageType;
 		bonus: number;
+		type: string;
 	};
-	category: WeaponCategory;
-	shield: {
+	type: "melee" | "ranged" | "shield";
+	category: string;
+	complex: boolean;
+	shield?: {
 		defense: number;
 		magicDefense: number;
 	};
+};
+
+export type ArmorModuleFeature = {
+	martial: boolean;
+	quality: string;
+	defense: {
+		modifier: number;
+		attribute: string;
+	};
+	magicDefense: {
+		modifier: number;
+		attribute: string;
+	};
+	description: string;
+};
+
+export type SupportModuleFeature = {
+	description: string;
 	complex: boolean;
 };
 
@@ -277,6 +307,58 @@ export type FUItem = Item &
 					HasBehavior & {
 						isCustomWeapon: { value: boolean };
 					};
+		  }
+		| {
+				type: "customWeapon";
+				system: {
+					description: string;
+					source?: { value: string };
+					fuid: string;
+					isFavored: { value: boolean };
+					showTitleCard: { value: boolean };
+					cost: number;
+					isMartial: boolean;
+					defense: "def" | "mdef";
+					isTransforming: boolean;
+					activeForm: "primaryForm" | "secondaryForm";
+					primaryForm: {
+						def: number;
+						mdef: number;
+						attributes: {
+							primary: ATTR;
+							secondary: ATTR;
+						};
+						accuracy: number;
+						damage: {
+							value: number;
+							type: DamageType;
+						};
+						type: "melee" | "ranged";
+						category: WeaponCategory;
+						name?: string;
+					};
+					secondaryForm: {
+						def: number;
+						mdef: number;
+						attributes: {
+							primary: ATTR;
+							secondary: ATTR;
+						};
+						accuracy: number;
+						damage: {
+							value: number;
+							type: DamageType;
+						};
+						type: "melee" | "ranged";
+						category: WeaponCategory;
+						name?: string;
+					};
+					traits: string[];
+					slots: string;
+					items: unknown[];
+					summary: string;
+					quality: string;
+				};
 		  }
 		| {
 				type: "armor" | "accessory" | "shield";
@@ -366,9 +448,29 @@ export type FUItem = Item &
 					};
 				};
 		  }
+		// Vehicle Frame
 		| {
 				type: "classFeature";
 				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					cost: { value: number };
+					featureType: "projectfu.vehicle";
+					source: string;
+					data: VehicleFrameFeature;
+				};
+		  }
+		// Weapon Module
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					cost: { value: number };
 					featureType: "projectfu.weaponModule";
 					source: string;
 					data: WeaponModuleFeature;
@@ -381,16 +483,88 @@ export type FUItem = Item &
 					summary: {
 						value: string;
 					};
+					cost: { value: number };
+					featureType: "projectfu.armorModule";
+					source: string;
+					data: ArmorModuleFeature;
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					cost: { value: number };
+					featureType: "projectfu.supportModule";
+					source: string;
+					data: SupportModuleFeature;
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
 					featureType: string;
+					source: string;
 					data: {
 						merge?: string;
 						pulse?: string;
 						dismiss?: string;
 						domains?: string;
+						level?: string;
 						duration?: string;
+						trigger?: string;
 						description?: string;
+						combinations?: Record<
+							string,
+							{
+								taste1: string;
+								taste2: string;
+								effect: string;
+							}
+						>;
 					};
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					featureType: "projectfu.magiseed";
 					source: string;
+					data: {
+						effectCount?: number;
+						effects?: Array<{
+							start: number;
+							end: number;
+							effect: string;
+						}>;
+					};
+				};
+		  }
+		| {
+				type: "classFeature";
+				system: {
+					fuid: string;
+					summary: {
+						value: string;
+					};
+					featureType: "projectfu.ingredient";
+					source: string;
+					data: {
+						taste: "bitter" | "salty" | "sour" | "sweet" | "umami";
+						quantity: number;
+						description?: string;
+						cost?: number | null;
+					};
 				};
 		  }
 	);

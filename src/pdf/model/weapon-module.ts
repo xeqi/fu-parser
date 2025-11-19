@@ -21,25 +21,33 @@ export function weaponModuleToFuItem(data: WeaponModule, imagePath: string, fold
 		img: imagePath + "/" + data.name + ".png",
 		folder: folderId,
 		system: {
+			fuid: data.name.toLowerCase().replace(/\s+/g, "-"),
+			summary: { value: "" },
 			featureType: "projectfu.weaponModule" as const,
 			source: source,
+			cost: { value: data.cost },
 			data: {
 				type: data.moduleType,
+				quality: "",
 				description: data.description,
 				accuracy: {
 					attr1: STAT_MAPPING[data.accuracy.primary],
 					attr2: STAT_MAPPING[data.accuracy.secondary],
 					modifier: data.accuracy.bonus,
+					defense: "def",
 				},
 				damage: {
 					type: data.damageType,
 					bonus: data.damage,
 				},
 				category: data.category,
-				shield: {
-					defense: 2,
-					magicDefense: 2,
-				},
+				shield:
+					data.moduleType === "shield"
+						? {
+								defense: 2,
+								magicDefense: 2,
+							}
+						: undefined,
 				complex: data.isComplex,
 			},
 		},

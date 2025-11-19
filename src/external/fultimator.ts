@@ -47,6 +47,58 @@ export type PCWeapon = {
 	quality: string;
 };
 
+export type PCCustomWeapon = {
+	name: string;
+	category: string;
+	range: string;
+	accuracyCheck: {
+		att1: Attributes;
+		att2: Attributes;
+	};
+	type: Elements;
+	customizations: Array<{
+		name: string;
+		effect: string;
+		martial: boolean;
+		customCost: number;
+	}>;
+	selectedQuality: string;
+	quality: string;
+	qualityCost: number;
+	cost: number;
+	hands: number;
+	martial: boolean;
+	isEquipped: boolean;
+	damageModifier: number;
+	precModifier: number;
+	defModifier: number;
+	mDefModifier: number;
+	overrideDamageType: boolean;
+	customDamageType: Elements;
+	// Transforming weapon properties
+	secondWeaponName: string;
+	secondSelectedCategory: string;
+	secondSelectedRange: string;
+	secondSelectedAccuracyCheck: {
+		att1: Attributes;
+		att2: Attributes;
+	};
+	secondSelectedType: Elements;
+	secondCurrentCustomizations: Array<{
+		name: string;
+		effect: string;
+		martial: boolean;
+		customCost: number;
+	}>;
+	secondDamageModifier: number;
+	secondPrecModifier: number;
+	secondDefModifier: number;
+	secondMDefModifier: number;
+	secondOverrideDamageType: boolean;
+	secondCustomDamageType: Elements;
+	dataType: "weapon";
+};
+
 export type PCShield = {
 	name: string;
 	cost: number;
@@ -224,6 +276,7 @@ export type Player = {
 	attributes: PCAttributes;
 	classes?: PCClasses[];
 	weapons?: PCWeaponAttack[];
+	customWeapons?: PCCustomWeapon[];
 	armor?: PCArmor[];
 	shields?: PCArmor[];
 	accessories?: PCAccessory[];
@@ -306,7 +359,13 @@ type SpellClass =
 	| "gamble"
 	| "magichant"
 	| "symbol"
-	| "dance";
+	| "dance"
+	| "gift"
+	| "therioform"
+	| "magiseed"
+	| "invocation"
+	| "cooking"
+	| "pilot-vehicle";
 
 export type PCSkills = {
 	skillName: string;
@@ -349,6 +408,10 @@ export type PCSpells = {
 	dismiss?: string;
 	pulse?: string;
 	pulseDesc?: string;
+	skillLevel?: number;
+	innerWellspring?: boolean;
+	chosenWellspring?: string;
+	allYouCanEat?: boolean;
 	tones?: Array<{
 		name: string;
 		effect?: string;
@@ -372,6 +435,91 @@ export type PCSpells = {
 		name: string;
 		effect?: string;
 		customName?: string;
+	}>;
+	gifts?: Array<{
+		name: string;
+		event?: string;
+		effect?: string;
+		customName?: string;
+	}>;
+	therioforms?: Array<{
+		name: string;
+		genoclepsis?: string;
+		description?: string;
+		customName?: string;
+	}>;
+	invocations?: Array<{
+		name: string;
+		skillLevel?: number;
+	}>;
+	magiseeds?: Array<{
+		name: string;
+		description?: string;
+		rangeStart?: number;
+		rangeEnd?: number;
+		effects?: Record<string, string>;
+		customName?: string;
+	}>;
+	gardenDescription?: string;
+	cookbookEffects?: Record<
+		string,
+		{
+			taste1: string;
+			taste2: string;
+			effect: string;
+			customChoices?: Record<string, string>;
+		}
+	>;
+	ingredientInventory?: Array<{
+		id: number;
+		name: string;
+		quantity: number;
+		taste: "bitter" | "salty" | "sour" | "sweet" | "umami";
+	}>;
+
+	// Vehicle-specific properties
+	vehicles?: Array<{
+		description?: string;
+		customName?: string;
+		frame: string;
+		maxEnabledModules?: number;
+		enabled?: boolean;
+		enabledModules?: string[];
+
+		modules: Array<{
+			name: string;
+			type: "pilot_module_weapon" | "pilot_module_armor" | "pilot_module_support";
+			description?: string;
+			customName?: string;
+			enabled: boolean;
+			equipped: boolean;
+			equippedSlot: "main" | "off" | "both" | "armor" | "support" | null;
+
+			// Common properties
+			att1?: Attributes;
+			att2?: Attributes;
+			prec?: number;
+			damage?: number;
+			cost?: number;
+
+			// Weapon-specific
+			cumbersome?: boolean;
+			takesTwoHands?: boolean;
+			quality?: string;
+			category?: string;
+			range?: "Melee" | "Ranged";
+			damageType?: string;
+			qualityCost?: number;
+			isShield?: boolean;
+
+			// Armor-specific
+			def?: number;
+			mdef?: number;
+			martial?: boolean;
+
+			// Support-specific
+			isComplex?: boolean;
+		}>;
 	}>;
 };
 
