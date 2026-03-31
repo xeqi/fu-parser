@@ -295,7 +295,10 @@ const importFultimatorCustomWeapon = async (data: PCCustomWeapon) => {
 		(data.secondCurrentCustomizations || []).some((c) => c.martial);
 
 	const primaryModifiers = calculateModifiers(data.customizations || [], data.category);
-	const secondaryModifiers = calculateModifiers(data.secondCurrentCustomizations || [], data.secondSelectedCategory);
+	const secondaryModifiers = calculateModifiers(
+		data.secondCurrentCustomizations || [],
+		data.secondSelectedCategory ?? data.category,
+	);
 
 	// Determine primary form range type
 	const primaryRange = data.range === "weapon_range_ranged" ? "ranged" : "melee";
@@ -331,7 +334,7 @@ const importFultimatorCustomWeapon = async (data: PCCustomWeapon) => {
 			fuid: slugify(data.name || "custom-weapon"),
 			isFavored: { value: false },
 			showTitleCard: { value: false },
-			cost: data.cost + data.qualityCost,
+			cost: (data.cost ?? 0) + data.qualityCost,
 			isMartial: isMartial,
 			defense: "def",
 			isTransforming: isTransforming,
@@ -356,18 +359,20 @@ const importFultimatorCustomWeapon = async (data: PCCustomWeapon) => {
 				def: (data.secondDefModifier || 0) + secondaryModifiers.defBonus,
 				mdef: (data.secondMDefModifier || 0) + secondaryModifiers.mdefBonus,
 				attributes: {
-					primary: mapAttribute(data.secondSelectedAccuracyCheck.att1),
-					secondary: mapAttribute(data.secondSelectedAccuracyCheck.att2),
+					primary: mapAttribute(data.secondSelectedAccuracyCheck?.att1 ?? data.accuracyCheck.att1),
+					secondary: mapAttribute(data.secondSelectedAccuracyCheck?.att2 ?? data.accuracyCheck.att2),
 				},
-				accuracy: data.secondPrecModifier + secondaryModifiers.accuracyBonus,
+				accuracy: (data.secondPrecModifier ?? 0) + secondaryModifiers.accuracyBonus,
 				damage: {
-					value: 5 + data.secondDamageModifier + secondaryModifiers.damageBonus,
+					value: 5 + (data.secondDamageModifier ?? 0) + secondaryModifiers.damageBonus,
 					type: mapDamageType(
-						data.secondOverrideDamageType ? data.secondCustomDamageType : data.secondSelectedType,
+						data.secondOverrideDamageType
+							? data.secondCustomDamageType ?? data.type
+							: data.secondSelectedType ?? data.type,
 					),
 				},
 				type: secondaryRange,
-				category: mapCategoryString(data.secondSelectedCategory),
+				category: mapCategoryString(data.secondSelectedCategory ?? data.category),
 				name: data.secondWeaponName || "",
 			},
 			traits: [],
@@ -2194,7 +2199,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		const primaryModifiers = calculateModifiers(customWeapon.customizations, customWeapon.category);
 		const secondaryModifiers = calculateModifiers(
 			customWeapon.secondCurrentCustomizations || [],
-			customWeapon.secondSelectedCategory,
+			customWeapon.secondSelectedCategory ?? customWeapon.category,
 		);
 
 		const primaryRange = customWeapon.range === "weapon_range_ranged" ? "ranged" : "melee";
@@ -2214,9 +2219,9 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		}
 
 		// Add secondary form customizations for transforming weapons
-		if (isTransforming && customWeapon.secondCurrentCustomizations.length > 0) {
+		if (isTransforming && (customWeapon.secondCurrentCustomizations || []).length > 0) {
 			description += "\n\n**Secondary Form Customizations:**\n";
-			description += customWeapon.secondCurrentCustomizations
+			description += (customWeapon.secondCurrentCustomizations || [])
 				.map((c) => `- ${mapCustomizationName(c.name)}`)
 				.join("\n");
 		}
@@ -2228,7 +2233,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 				fuid: slugify(customWeapon.name || "custom-weapon"),
 				isFavored: { value: false },
 				showTitleCard: { value: false },
-				cost: customWeapon.cost + customWeapon.qualityCost,
+				cost: (customWeapon.cost ?? 0) + customWeapon.qualityCost,
 				isMartial: isMartial,
 				defense: "def",
 				isTransforming: isTransforming,
@@ -2255,20 +2260,24 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 					def: (customWeapon.secondDefModifier || 0) + secondaryModifiers.defBonus,
 					mdef: (customWeapon.secondMDefModifier || 0) + secondaryModifiers.mdefBonus,
 					attributes: {
-						primary: mapAttribute(customWeapon.secondSelectedAccuracyCheck.att1),
-						secondary: mapAttribute(customWeapon.secondSelectedAccuracyCheck.att2),
+						primary: mapAttribute(
+							customWeapon.secondSelectedAccuracyCheck?.att1 ?? customWeapon.accuracyCheck.att1,
+						),
+						secondary: mapAttribute(
+							customWeapon.secondSelectedAccuracyCheck?.att2 ?? customWeapon.accuracyCheck.att2,
+						),
 					},
-					accuracy: customWeapon.secondPrecModifier + secondaryModifiers.accuracyBonus,
+					accuracy: (customWeapon.secondPrecModifier ?? 0) + secondaryModifiers.accuracyBonus,
 					damage: {
-						value: 5 + customWeapon.secondDamageModifier + secondaryModifiers.damageBonus,
+						value: 5 + (customWeapon.secondDamageModifier ?? 0) + secondaryModifiers.damageBonus,
 						type: mapDamageType(
 							customWeapon.secondOverrideDamageType
-								? customWeapon.secondCustomDamageType
-								: customWeapon.secondSelectedType,
+								? customWeapon.secondCustomDamageType ?? customWeapon.type
+								: customWeapon.secondSelectedType ?? customWeapon.type,
 						),
 					},
 					type: secondaryRange,
-					category: mapCategoryString(customWeapon.secondSelectedCategory),
+					category: mapCategoryString(customWeapon.secondSelectedCategory ?? customWeapon.category),
 					name: customWeapon.secondWeaponName || "",
 				},
 				traits: [],

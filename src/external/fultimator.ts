@@ -62,13 +62,13 @@ export type PCCustomWeapon = {
 		martial: boolean;
 		customCost: number;
 	}>;
-	selectedQuality: string;
+	selectedQuality?: string;
 	quality: string;
 	qualityCost: number;
-	cost: number;
-	hands: number;
+	cost?: number;
+	hands?: number;
 	martial: boolean;
-	isEquipped: boolean;
+	isEquipped?: boolean;
 	damageModifier: number;
 	precModifier: number;
 	defModifier: number;
@@ -76,26 +76,26 @@ export type PCCustomWeapon = {
 	overrideDamageType: boolean;
 	customDamageType: Elements;
 	// Transforming weapon properties
-	secondWeaponName: string;
-	secondSelectedCategory: string;
-	secondSelectedRange: string;
-	secondSelectedAccuracyCheck: {
+	secondWeaponName?: string;
+	secondSelectedCategory?: string;
+	secondSelectedRange?: string;
+	secondSelectedAccuracyCheck?: {
 		att1: Attributes;
 		att2: Attributes;
 	};
-	secondSelectedType: Elements;
-	secondCurrentCustomizations: Array<{
+	secondSelectedType?: Elements;
+	secondCurrentCustomizations?: Array<{
 		name: string;
 		effect: string;
 		martial: boolean;
 		customCost: number;
 	}>;
-	secondDamageModifier: number;
-	secondPrecModifier: number;
-	secondDefModifier: number;
-	secondMDefModifier: number;
-	secondOverrideDamageType: boolean;
-	secondCustomDamageType: Elements;
+	secondDamageModifier?: number;
+	secondPrecModifier?: number;
+	secondDefModifier?: number;
+	secondMDefModifier?: number;
+	secondOverrideDamageType?: boolean;
+	secondCustomDamageType?: Elements;
 	dataType: "weapon";
 };
 
