@@ -2454,14 +2454,20 @@ const importFultimatorNPC = async (data: Npc) => {
 				magic: { value: 0, bonus: data.extra && data.extra.magic ? 3 : 0 },
 			},
 			traits: { value: data.traits || "" },
-			species: { value: data.species.toLowerCase() },
+			species: { value: data.species.toLowerCase().replace(/^variant\s+/, "") },
 			useEquipment: { value: equipment.length != 0 },
 			villain: { value: data.villain || "" },
 			phases: { value: phases || 0 },
 			multipart: { value: data.multipart || "" },
-			isElite: { value: data.rank == "elite" },
-			isChampion: { value: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1 },
-			isCompanion: { value: data.rank == "companion" },
+			rank: {
+				value: (data.rank && /champion/.test(data.rank) ? "champion" : data.rank ?? "soldier") as
+					| "soldier"
+					| "elite"
+					| "champion"
+					| "companion"
+					| "custom",
+				replacedSoldiers: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1,
+			},
 			study: { value: 0 as const },
 			description: parseMarkdown(data.description || ""),
 		},

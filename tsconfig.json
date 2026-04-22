@@ -2,9 +2,8 @@
   "compilerOptions": {
     // required
     "allowSyntheticDefaultImports": true,
-    "downlevelIteration": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
