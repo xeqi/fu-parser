@@ -17,7 +17,7 @@ import { Accessory } from "../../pdf/model/accessory";
 import { WeaponModule } from "../../pdf/model/weapon-module";
 import { CampActivity } from "../../pdf/model/camp-activity";
 
-const FUCR_PAGES = [272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 283, 284, 285, 287, 288, 289];
+const FUCR_PAGES = [272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289];
 const FUHF_PAGES = [80, 81, 82, 83];
 const FUNF_PAGES = [86, 87, 88, 89, 133, 134, 135];
 const FUTF_PAGES = [84, 85, 86, 87, 88, 89];
