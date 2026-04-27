@@ -120,6 +120,88 @@ const lookupAffinity = (affinity?: Affinities) => {
 
 const getName = (name?: string, fallback = "Unnamed") => name?.trim() || fallback;
 
+const VALID_ACTOR_IMAGE_EXTENSIONS = new Set([
+	"png",
+	"jpg",
+	"jpeg",
+	"webp",
+	"gif",
+	"svg",
+	"avif",
+	"apng",
+	"bmp",
+	"tif",
+	"tiff",
+	"webm",
+]);
+
+type Notifications = {
+	warn: (msg: string) => void;
+	error: (msg: string) => void;
+};
+
+const getNotifications = (): Notifications | undefined => {
+	return (globalThis as { ui?: { notifications?: Notifications } }).ui?.notifications;
+};
+
+const notifyWarning = (message: string) => {
+	getNotifications()?.warn(message);
+};
+
+const notifyError = (message: string) => {
+	getNotifications()?.error(message);
+};
+
+const extractPathFromUrl = (value: string): string => {
+	try {
+		const parsed = new URL(value);
+		return decodeURIComponent(parsed.pathname);
+	} catch {
+		return decodeURIComponent(value.split(/[?#]/)[0]);
+	}
+};
+
+const getExtensionFromPath = (path: string): string | undefined => {
+	const extMatch = path.toLowerCase().match(/\.([a-z0-9]+)$/);
+	return extMatch?.[1];
+};
+
+const getActorImageImportFields = (
+	actorName: string,
+	rawImageUrl?: string,
+): {
+	imageFields?: Pick<FUActor, "img" | "prototypeToken">;
+	rejectedImageUrl?: string;
+} => {
+	if (!rawImageUrl?.trim()) return {};
+
+	const imageUrl = rawImageUrl.trim();
+	const extension = getExtensionFromPath(extractPathFromUrl(imageUrl));
+
+	if (!extension || !VALID_ACTOR_IMAGE_EXTENSIONS.has(extension)) {
+		const reason = !extension
+			? `image URL has no file extension, so Foundry rejects it (${imageUrl})`
+			: `image extension ".${extension}" is not supported by Foundry (${imageUrl})`;
+		const warning = `Imported ${actorName} without image: ${reason}`;
+		console.warn(`[fu-parser] ${warning}`);
+		notifyWarning(warning);
+		return { rejectedImageUrl: imageUrl };
+	}
+
+	return {
+		imageFields: {
+			img: imageUrl,
+			prototypeToken: { texture: { src: imageUrl } },
+		},
+	};
+};
+
+const prependImageUrlToDescription = (description: string, rejectedImageUrl?: string): string => {
+	if (!rejectedImageUrl) return description;
+	const imageLine = `Image URL: ${rejectedImageUrl}`;
+	return description ? `${imageLine}<br><br>${description}` : imageLine;
+};
+
 const parseMpCost = (mp: string | number | undefined) => {
 	if (typeof mp === "string") {
 		const perTargetRegex = /(\d+)\s*(x|×)\s*T/i;
@@ -460,8 +542,6 @@ const importFultimatorAccessory = async (data: PCAccessory) => {
 };
 
 const importFultimatorPC = async (data: Player, preferCompendium: boolean = true) => {
-	typeof data.id === "number" ? data.id.toString() : data.id;
-
 	const transformBondData = (bonds: PCBond[]): BondInput[] => {
 		return bonds.map((bond) => {
 			const nonEmptyFieldsCount = [
@@ -484,6 +564,10 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 			};
 		});
 	};
+
+	const actorName = getName(data.name, "Unnamed PC");
+	const { imageFields, rejectedImageUrl } = getActorImageImportFields(actorName, data.imgurl || data.info.imgurl);
+	const actorDescription = prependImageUrlToDescription(parseMarkdown(data.info.description) || "", rejectedImageUrl);
 
 	const payload: FUActorPC = {
 		system: {
@@ -596,10 +680,11 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 					spell: 0,
 				},
 			},
-			description: parseMarkdown(data.info.description) || "",
+			description: actorDescription,
 		},
 		type: "character",
-		name: data.name != "" ? data.name : "Unnamed NPC",
+		name: data.name != "" ? data.name : "Unnamed PC",
+		...(imageFields || {}),
 	};
 
 	const classItems = await Promise.all(
@@ -2331,7 +2416,9 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 };
 
 const importFultimatorNPC = async (data: Npc) => {
-	typeof data.id === "number" ? data.id.toString() : data.id;
+	const actorName = getName(data.name, "Unnamed NPC");
+	const { imageFields, rejectedImageUrl } = getActorImageImportFields(actorName, data.imgurl);
+	const actorDescription = prependImageUrlToDescription(parseMarkdown(data.description || ""), rejectedImageUrl);
 	const phases = typeof data.phases === "string" ? Number(data.phases) : data.phases;
 	let mainHandFree = true;
 	let offHandFree = true;
@@ -2475,10 +2562,11 @@ const importFultimatorNPC = async (data: Npc) => {
 				replacedSoldiers: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1,
 			},
 			study: { value: 0 as const },
-			description: parseMarkdown(data.description || ""),
+			description: actorDescription,
 		},
 		type: "npc",
 		name: data.name != "" ? data.name : "Unnamed NPC",
+		...(imageFields || {}),
 	};
 
 	const actor = await Actor.create(payload);
@@ -2772,6 +2860,7 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 			e.preventDefault();
 			this.object.inProgress = true;
 			this.render();
+			let succeeded = false;
 			try {
 				if (this.object.parse) {
 					switch (this.object.dataType) {
@@ -2798,9 +2887,19 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 							break;
 					}
 				}
+				succeeded = true;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				console.error("[fu-parser] Fultimator import failed", error);
+				this.object.error = message;
+				notifyError(`Fultimator import failed: ${message}`);
 			} finally {
 				this.object.inProgress = false;
-				this.close();
+				if (succeeded) {
+					this.close();
+				} else {
+					this.render();
+				}
 			}
 		});
 	}
