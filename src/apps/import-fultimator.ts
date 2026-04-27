@@ -85,9 +85,10 @@ const CATEGORY_MAPPING: Record<WeaponCategory, CATEGORY> = {
 	Sword: "sword",
 };
 
-const AFF_MAPPING: Record<Affinities, number> = {
+const AFF_MAPPING: Record<string, number> = {
 	vu: -1,
 	no: 0,
+	n: 0,
 	rs: 1,
 	im: 2,
 	ab: 3,
@@ -113,7 +114,8 @@ const ELEMENTS_MAPPING: Record<Elements, DamageType> = {
 };
 
 const lookupAffinity = (affinity?: Affinities) => {
-	return affinity ? AFF_MAPPING[affinity] : 0;
+	if (typeof affinity === "number") return affinity;
+	return affinity ? AFF_MAPPING[affinity.toLowerCase()] : 0;
 };
 
 const getName = (name?: string, fallback = "Unnamed") => name?.trim() || fallback;
@@ -2333,9 +2335,13 @@ const importFultimatorNPC = async (data: Npc) => {
 	const phases = typeof data.phases === "string" ? Number(data.phases) : data.phases;
 	let mainHandFree = true;
 	let offHandFree = true;
+	const hasEquipmentName = (
+		equipment?: Partial<NpcArmor> | Weapon,
+	): equipment is (NpcArmor | Weapon) & { name: string } =>
+		typeof equipment?.name === "string" && equipment.name.trim() !== "";
 
 	const equipment = [data.armor, data.shield, ...(data.weaponattacks?.map((e) => e.weapon) || [])]
-		.filter((e): e is NpcArmor | Weapon => e != null)
+		.filter(hasEquipmentName)
 		.map((e) => {
 			const item = game.items.find((f) => f.name.toLowerCase() === e.name.toLowerCase()) as FUItem;
 			if (item) {

@@ -112,7 +112,25 @@ export type PCShield = {
 	quality: string;
 };
 
-export type Affinities = "rs" | "vu" | "ab" | "im" | "no";
+export type Affinities =
+	| ""
+	| "rs"
+	| "vu"
+	| "ab"
+	| "im"
+	| "no"
+	| "RS"
+	| "VU"
+	| "AB"
+	| "IM"
+	| "NO"
+	| "N"
+	| "n"
+	| -1
+	| 0
+	| 1
+	| 2
+	| 3;
 
 export type Elements = "physical" | "wind" | "bolt" | "dark" | "earth" | "fire" | "ice" | "light" | "poison";
 
@@ -246,8 +264,8 @@ export type Npc = {
 	special?: NpcSpecial[];
 	weaponattacks?: NpcWeaponAttack[];
 	description?: string;
-	armor?: NpcArmor;
-	shield?: NpcArmor;
+	armor?: Partial<NpcArmor>;
+	shield?: Partial<NpcArmor>;
 	raregear?: NpcRareGear[];
 	label?: string;
 	notes?: NpcNotes[];
