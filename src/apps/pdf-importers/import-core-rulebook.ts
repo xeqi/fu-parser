@@ -4,7 +4,7 @@ import { basicWeapons, rareWeapons } from "../../pdf/parsers/weaponPage";
 import { armorPage } from "../../pdf/parsers/armorPage";
 import { shieldPage } from "../../pdf/parsers/shieldPage";
 import { accessories } from "../../pdf/parsers/accessoryPage";
-import { beastiary } from "../../pdf/parsers/beastiaryPage";
+import { beastiary, beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
 import { StringToken, Token } from "../../pdf/lexers/token";
 import { saveAccessories, saveArmors, saveBeasts, saveConsumables, saveShields, saveWeapons } from "./save-utils";
 import { ParseResult } from "../import-pdf";
@@ -13,6 +13,15 @@ type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
 	p: Parser<T[]>,
 	s: (t: T[], source: string, f: readonly string[], imagePath: string) => Promise<void>,
 ) => Promise<ParseResult>;
+
+const BESTIARY_PAGES = [
+	326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348,
+	349, 350, 351, 352, 353, 354, 355,
+] as const;
+
+const FUCR_BESTIARY_PAGES = Object.fromEntries(
+	BESTIARY_PAGES.map((p) => [p, [["Beastiary"], (f: Wrapper) => f(beastiaryFUCR, saveBeasts)]]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
 
 const PAGES = {
 	106: [["Equipment", "Consumables"], (f: Wrapper) => f(consumablesPage, saveConsumables)],
@@ -72,15 +81,17 @@ const PAGES = {
 
 const pr = (z: string | StringToken) => (typeof z === "string" ? z : `<Text str="${z.string}" font="${z.font}">`);
 
-export function importCoreRulebook(
+function importPages(
+	pages: Record<number, readonly [readonly string[], (f: Wrapper) => Promise<ParseResult>]>,
+	sourcePrefix: string,
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	return Promise.all(
-		Object.entries(PAGES).map(([pageNumStr, [folders, f]]) => {
+		Object.entries(pages).map(([pageNumStr, [folders, f]]) => {
 			return f(async (parser, save) => {
 				const pageNum = Number(pageNumStr);
 				const [r, cleanup] = await withPage(pageNum, async (data) => {
-					const source = "FUCR" + (pageNum - 2);
+					const source = sourcePrefix + (pageNum - 2);
 					const parses = parser([data, 0]);
 					const successes = parses.filter(isResult);
 					if (successes.length == 1) {
@@ -125,4 +136,16 @@ export function importCoreRulebook(
 			});
 		}),
 	);
+}
+
+export function importCoreRulebook(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(PAGES, "FUCR", withPage);
+}
+
+export function importCoreBestiary(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(FUCR_BESTIARY_PAGES, "FUCR", withPage);
 }

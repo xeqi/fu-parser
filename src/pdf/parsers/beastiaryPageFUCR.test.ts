@@ -3,11 +3,24 @@ import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Token } from "../lexers/token";
 import { flatMap, isResult } from "./lib";
-import { beastiary } from "./beastiaryPage";
+import { beastiaryFUCR, FUCR_FONTS } from "./beastiaryPage";
 
-import { DAMAGE_TYPES, DIE_SIZES, Distance, Image, STATS, TYPE_CODES } from "../model/common";
+import { DAMAGE_TYPES, DIE_SIZES, Distance, Image, STATS } from "../model/common";
 import { Beast } from "../model/beast";
 import { prettifyStrings } from "../parsers-commons";
+
+const F = FUCR_FONTS;
+const fontStr = (f: { fonts: RegExp[] }) => f.fonts[0].source.replace(/\$$/, "");
+const meleeFont = fontStr(F.meleeIcon);
+const rangedFont = fontStr(F.rangedIcon);
+const spellHeaderFont = fontStr(F.spellHeaderIcon);
+const spellAccuracyFont = fontStr(F.spellAccuracyIcon);
+const otherActionFont = fontStr(F.otherActionIcon);
+const sepFont = fontStr(F.sep);
+const bracketOpenFont = fontStr(F.bracketOpen);
+const bracketCloseFont = fontStr(F.bracketClose);
+const descFont = F.descriptionFonts[0].source.replace(/\$$/, "");
+const boldFont = F.boldFonts[0].source.replace(/\$$/, "");
 
 const beastiaryDataGen = fc.array(
 	fc.record({
@@ -90,20 +103,20 @@ const beastiaryDataGen = fc.array(
 	{ minLength: 1 },
 );
 
-test("parses generated", () => {
+test("FUCR: parses generated", () => {
 	fc.assert(
 		fc.property(beastiaryDataGen, (cs): void => {
 			const pageTokens: Token[] = [
-				imageToken({ width: 0, height: 0 } as Image),
-				imageToken({ width: 0, height: 0 } as Image),
-				stringToken(""),
+				imageToken({ width: 114, height: 1248 } as Image),
+				stringToken("324"),
+				stringToken("W"),
 				...flatMap(cs, (b) => [
 					imageToken(b.image),
 					stringToken(b.name),
 					stringToken(`Lv ${b.level}`),
-					stringToken("w", "XFYKOE+Wingdings-Regular"),
+					stringToken(F.sep.char, sepFont),
 					stringToken(b.type),
-					...b.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+					...b.description.map((s) => stringToken(s, descFont)),
 					stringToken("Typical Traits:"),
 					stringToken(b.traits),
 					stringToken(`DEX d${b.attributes.dex}`),
@@ -112,7 +125,7 @@ test("parses generated", () => {
 					stringToken(`WLP d${b.attributes.wlp}`),
 					stringToken("HP"),
 					stringToken(b.attributes.maxHp.toString()),
-					stringToken("w", "XFYKOE+Wingdings-Regular"),
+					stringToken(F.sep.char, sepFont),
 					stringToken(b.attributes.crisis.toString()),
 					stringToken("MP"),
 					stringToken(b.attributes.maxMp.toString()),
@@ -120,12 +133,14 @@ test("parses generated", () => {
 					stringToken(`DEF +${b.attributes.def}`),
 					stringToken(`M.DEF +${b.attributes.mdef}`),
 					...flatMap(DAMAGE_TYPES, (k) => {
+						const rf = F.resistanceFonts!;
+						const normalFont = rf.normalFont.source.replace(/\$$/, "");
+						const nonNormalFont = rf.nonNormalFont.source.replace(/\$$/, "");
 						const resist = b.resists[k];
-						if (resist != null) {
-							const tok = stringToken(TYPE_CODES[k]);
-							return [tok, tok, stringToken(resist)];
+						if (resist !== "N") {
+							return [stringToken("X", nonNormalFont), stringToken(resist)];
 						} else {
-							return [stringToken(k)];
+							return [stringToken("x", normalFont)];
 						}
 					}),
 					...(b.equipment == null
@@ -134,54 +149,55 @@ test("parses generated", () => {
 					stringToken("BASIC ATTACKS"),
 					...flatMap(b.attacks, (a) => [
 						...(a.range == "melee"
-							? [stringToken("$", "DHVFUS+Evilz")]
-							: [stringToken("a", "QTFAUS+fabulaultima"), stringToken("a", "QTFAUS+fabulaultima")]),
+							? [stringToken(F.meleeIcon.char, meleeFont)]
+							: [stringToken(F.rangedIcon.char, rangedFont), stringToken(F.rangedIcon.char, rangedFont)]),
 						stringToken(a.name),
-						stringToken("w", "XFYKOE+Wingdings-Regular"),
-						stringToken("【"),
+						stringToken(F.sep.char, sepFont),
+						stringToken(F.bracketOpen.char, bracketOpenFont),
 						stringToken(`${a.accuracy.primary} + ${a.accuracy.secondary}`),
-						stringToken("】"),
+						stringToken(F.bracketClose.char, bracketCloseFont),
 						...(a.accuracy.bonus == 0 ? [] : [stringToken(`+${a.accuracy.bonus}`)]),
-						stringToken("w", "XFYKOE+Wingdings-Regular"),
-						stringToken("【"),
+						stringToken(F.sep.char, sepFont),
+						stringToken(F.bracketOpen.char, bracketOpenFont),
 						stringToken(`HR + ${a.damage}`),
-						stringToken("】"),
-						...(a.damageType == null ? [] : [stringToken(a.damageType, "WTLEAG+PTSans-NarrowBold")]),
-						...a.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+						stringToken(F.bracketClose.char, bracketCloseFont),
+						...(a.damageType == null ? [] : [stringToken(a.damageType, boldFont)]),
+						...a.description.map((s) => stringToken(s, descFont)),
 					]),
 					...(b.spells.length == 0
 						? []
 						: [
 								stringToken("SPELLS"),
 								...flatMap(b.spells, (spell) => [
-									stringToken("h", "DHVFUS+Evilz"),
+									stringToken(F.spellHeaderIcon.char, spellHeaderFont),
+									stringToken(F.spellHeaderIcon.char, spellHeaderFont),
 									stringToken(spell.name),
 									...(spell.accuracy == null
 										? []
 										: [
-												stringToken("r", "URFDYK+Heydings-Icons"),
-												stringToken("r", "URFDYK+Heydings-Icons"),
-												stringToken("w", "XFYKOE+Wingdings-Regular"),
-												stringToken("【"),
+												stringToken(F.spellAccuracyIcon.char, spellAccuracyFont),
+												stringToken(F.spellAccuracyIcon.char, spellAccuracyFont),
+												stringToken(F.sep.char, sepFont),
+												stringToken(F.bracketOpen.char, bracketOpenFont),
 												stringToken(`${spell.accuracy.primary} + ${spell.accuracy.secondary}`),
-												stringToken("】"),
+												stringToken(F.bracketClose.char, bracketCloseFont),
 												...(spell.accuracy.bonus == 0
 													? []
 													: [stringToken(`+${spell.accuracy.bonus}`)]),
 											]),
-									stringToken("w", "XFYKOE+Wingdings-Regular"),
+									stringToken(F.sep.char, sepFont),
 									stringToken(spell.mp + " MP"),
-									stringToken("w", "XFYKOE+Wingdings-Regular"),
+									stringToken(F.sep.char, sepFont),
 									stringToken(spell.target),
-									stringToken("w", "XFYKOE+Wingdings-Regular"),
+									stringToken(F.sep.char, sepFont),
 									stringToken(spell.duration),
 									stringToken("."),
-									...spell.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+									...spell.description.map((s) => stringToken(s, descFont)),
 									...(spell.opportunity == null
 										? []
 										: [
 												stringToken("Opportunity:"),
-												...spell.opportunity.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+												...spell.opportunity.map((s) => stringToken(s, descFont)),
 											]),
 								]),
 							]),
@@ -190,10 +206,11 @@ test("parses generated", () => {
 						: [
 								stringToken("OTHER ACTIONS"),
 								...flatMap(b.otherActions, (oa) => [
-									stringToken("S", "MNCCQA+WebSymbols-Regular"),
-									stringToken(oa.name, "WTLEAG+PTSans-NarrowBold"),
-									stringToken("w", "XFYKOE+Wingdings-Regular"),
-									...oa.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+									stringToken(F.otherActionIcon.char, otherActionFont),
+									stringToken(F.otherActionIcon.char, otherActionFont),
+									stringToken(oa.name, boldFont),
+									stringToken(F.sep.char, sepFont),
+									...oa.description.map((s) => stringToken(s, descFont)),
 								]),
 							]),
 					...(b.specialRules.length == 0
@@ -202,14 +219,14 @@ test("parses generated", () => {
 								stringToken("SPECIAL RULES"),
 								...flatMap(b.specialRules, (sr) => [
 									stringToken(sr.name),
-									stringToken("w", "XFYKOE+Wingdings-Regular"),
-									...sr.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),
+									stringToken(F.sep.char, sepFont),
+									...sr.description.map((s) => stringToken(s, descFont)),
 								]),
 							]),
 				]),
 				watermark,
 			];
-			const parses = beastiary([pageTokens, 0]);
+			const parses = beastiaryFUCR([pageTokens, 0]);
 			const expected: Beast[] = cs.map((v) => {
 				return {
 					...v,

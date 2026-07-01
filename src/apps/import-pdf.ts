@@ -1,6 +1,6 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { tokenizePDF } from "../pdf/lexers/pdf";
-import { importCoreRulebook } from "./pdf-importers/import-core-rulebook";
+import { importCoreRulebook, importCoreBestiary } from "./pdf-importers/import-core-rulebook";
 import { importItems } from "./pdf-importers/import-items";
 
 // Relative url that foundry serves for the compiled webworker
@@ -27,6 +27,7 @@ const parsePdf = async (pdfPath: string, bookType: BookType): Promise<[ParseResu
 		case "FUCR_LEGACY":
 			return [await importCoreRulebook(withPage), destroy];
 		case "FUCR":
+			return [[...(await importItems(withPage, bookType)), ...(await importCoreBestiary(withPage))], destroy];
 		case "FUHF":
 		case "FUTF":
 		case "FUNF":
