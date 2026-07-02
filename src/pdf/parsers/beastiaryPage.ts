@@ -26,7 +26,7 @@ import {
 	watermark,
 } from "./lib";
 import { isStringToken, StringToken } from "../lexers/token";
-import { Beast } from "../model/beast";
+import { Beast, parseBeastRank } from "../model/beast";
 import {
 	AFFINITIES,
 	Affinity,
@@ -47,7 +47,7 @@ export interface BeastiaryFonts {
 	spellAccuracyIcon: { char: string; fonts: RegExp[] };
 	otherActionIcon: { char: string; fonts: RegExp[] };
 	sep: { char: string; fonts: RegExp[] };
-	/** e.g. 【 or ( — varies per format */
+	/** e.g. 【 or ( */
 	bracketOpen: { char: string; fonts: RegExp[] };
 	bracketClose: { char: string; fonts: RegExp[] };
 	boldFonts: RegExp[];
@@ -399,9 +399,12 @@ export const makeBeastiary = (fonts: BeastiaryFonts): Parser<Beast[]> => {
 			otherActions,
 			specialRules,
 		]) => {
+			const { name: cleanName, rank, phases } = parseBeastRank(name);
 			return {
 				image,
-				name,
+				name: cleanName,
+				rank,
+				phases,
 				level,
 				type,
 				description,

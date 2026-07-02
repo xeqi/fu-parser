@@ -1,10 +1,14 @@
 import { flatMap, isError, isResult, Parser } from "../../pdf/parsers/lib";
+import { isImageToken } from "../../pdf/lexers/token";
+import { Beast } from "../../pdf/model/beast";
+import { Image } from "../../pdf/model/common";
 import { consumablesPage } from "../../pdf/parsers/consumablePage";
 import { basicWeapons, rareWeapons } from "../../pdf/parsers/weaponPage";
 import { armorPage } from "../../pdf/parsers/armorPage";
 import { shieldPage } from "../../pdf/parsers/shieldPage";
 import { accessories } from "../../pdf/parsers/accessoryPage";
 import { beastiary, beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
+import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
 import { StringToken, Token } from "../../pdf/lexers/token";
 import { saveAccessories, saveArmors, saveBeasts, saveConsumables, saveShields, saveWeapons } from "./save-utils";
 import { ParseResult } from "../import-pdf";
@@ -22,6 +26,91 @@ const BESTIARY_PAGES = [
 const FUCR_BESTIARY_PAGES = Object.fromEntries(
 	BESTIARY_PAGES.map((p) => [p, [["Beastiary"], (f: Wrapper) => f(beastiaryFUCR, saveBeasts)]]),
 ) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+const FUHF_PAGES = [172, 173, 174, 175, 178, 182, 183, 184, 188, 189, 190, 191, 194, 196, 197, 198] as const;
+const FUTF_PAGES = [188, 189, 190, 194, 195, 196, 200, 201, 204, 205, 206, 207, 212, 213, 214, 215] as const;
+const FUNF_PAGES = [180, 181, 186, 187, 190, 191, 192, 193, 196, 197, 198, 199, 203, 205, 207] as const;
+
+const bestiaryPages = (parser: typeof beastiaryFUCR, pages: readonly number[], folder: string) =>
+	Object.fromEntries(pages.map((p) => [p, [[folder], (f: Wrapper) => f(parser, saveBeasts)]])) as Record<
+		number,
+		[readonly string[], (f: Wrapper) => Promise<ParseResult>]
+	>;
+
+const FUHF_BESTIARY_PAGES = bestiaryPages(beastiaryFUHF, FUHF_PAGES, "High Fantasy Bestiary");
+const FUTF_BESTIARY_PAGES = bestiaryPages(beastiaryFUTF, FUTF_PAGES, "Techno Fantasy Bestiary");
+const FUNF_BESTIARY_PAGES = bestiaryPages(beastiaryFUNF, FUNF_PAGES, "Natural Fantasy Bestiary");
+
+// Beasts whose art is a full-page image on a separate page: cleaned name -> art page.
+const FUHF_ART_OVERRIDES: Record<string, number> = {
+	EILEEN: 170,
+	"FLAME DRAGON": 176,
+	CERINE: 180,
+	CECILIA: 180,
+	"MAXIMILIAN, THE PRINCE": 186,
+	"MAXIMILIAN, THE BASTION": 186,
+	MIMESIS: 193,
+	ANAGNORISIS: 193,
+	"DRAMATIST’S QUILL": 193,
+	CATHARSIS: 193,
+};
+const FUTF_ART_OVERRIDES: Record<string, number> = {
+	"COMMISSIONER VYNE": 186,
+	"PRIMARY CORE": 198,
+	"DIGITAL LIMB A": 198,
+	"DIGITAL LIMB B": 198,
+	"THE RELENTLESS": 202,
+	"ATTACK WING": 202,
+	"SUPPORT WING": 202,
+	"ADMIRAL CERYON": 202,
+	"THE PATRIARCH": 209,
+	"CONCEPTUAL DYAD": 209,
+	"THE PURE CONCEPT": 209,
+};
+const FUNF_ART_OVERRIDES: Record<string, number> = {
+	ABDOMEN: 178,
+	HEAD: 178,
+	THORAX: 178,
+	NODE: 184,
+	DYLON: 184,
+	"BACK OF BRIGHTVALE": 188,
+	"FUNERARY LANTERN": 188,
+	"HEAD OF BRIGHTVALE": 188,
+	"QUEEN OF MIDDAY": 194,
+	"QUEEN OF MIDNIGHT": 194,
+	"ELDGREN, THE ANCIENT": 201,
+};
+
+const largestImage = (tokens: Token[]): Image | null => {
+	let best: Image | null = null;
+	for (const t of tokens) {
+		if (!isImageToken(t)) continue;
+		if (!best || t.image.width * t.image.height > best.width * best.height) best = t.image;
+	}
+	return best;
+};
+
+// Returns the art pages' cleanups; caller must defer them until after save.
+const applyArtOverrides = async (
+	beasts: Beast[],
+	overrides: Record<string, number>,
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<(() => boolean)[]> => {
+	const cache = new Map<number, Image | null>();
+	const cleanups: (() => boolean)[] = [];
+	for (const beast of beasts) {
+		const artPage = overrides[beast.name];
+		if (artPage === undefined) continue;
+		if (!cache.has(artPage)) {
+			const [img, cleanup] = await withPage(artPage, async (tokens) => largestImage(tokens));
+			cache.set(artPage, img);
+			cleanups.push(cleanup);
+		}
+		const img = cache.get(artPage);
+		if (img) beast.image = img;
+	}
+	return cleanups;
+};
 
 const PAGES = {
 	106: [["Equipment", "Consumables"], (f: Wrapper) => f(consumablesPage, saveConsumables)],
@@ -85,16 +174,27 @@ function importPages(
 	pages: Record<number, readonly [readonly string[], (f: Wrapper) => Promise<ParseResult>]>,
 	sourcePrefix: string,
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+	artOverrides?: Record<string, number>,
 ): Promise<ParseResult[]> {
 	return Promise.all(
 		Object.entries(pages).map(([pageNumStr, [folders, f]]) => {
 			return f(async (parser, save) => {
 				const pageNum = Number(pageNumStr);
+				const artCleanups: (() => boolean)[] = [];
 				const [r, cleanup] = await withPage(pageNum, async (data) => {
 					const source = sourcePrefix + (pageNum - 2);
 					const parses = parser([data, 0]);
 					const successes = parses.filter(isResult);
 					if (successes.length == 1) {
+						if (artOverrides) {
+							artCleanups.push(
+								...(await applyArtOverrides(
+									successes[0].result[0] as unknown as Beast[],
+									artOverrides,
+									withPage,
+								)),
+							);
+						}
 						return {
 							type: "success" as const,
 							page: pageNum,
@@ -127,10 +227,14 @@ function importPages(
 						}
 					}
 				});
+				const cleanupAll = () => {
+					artCleanups.forEach((c) => c());
+					return cleanup();
+				};
 				if (r.type === "success") {
-					return { ...r, cleanup };
+					return { ...r, cleanup: cleanupAll };
 				} else {
-					cleanup();
+					cleanupAll();
 					return r;
 				}
 			});
@@ -148,4 +252,22 @@ export function importCoreBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	return importPages(FUCR_BESTIARY_PAGES, "FUCR", withPage);
+}
+
+export function importHighFantasyBestiary(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(FUHF_BESTIARY_PAGES, "FUHF", withPage, FUHF_ART_OVERRIDES);
+}
+
+export function importTechnoFantasyBestiary(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(FUTF_BESTIARY_PAGES, "FUTF", withPage, FUTF_ART_OVERRIDES);
+}
+
+export function importNaturalFantasyBestiary(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(FUNF_BESTIARY_PAGES, "FUNF", withPage, FUNF_ART_OVERRIDES);
 }

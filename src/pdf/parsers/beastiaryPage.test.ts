@@ -13,6 +13,7 @@ const beastiaryDataGen = fc.array(
 	fc.record({
 		image: fc.constant({ width: 0, height: 0 } as Image),
 		name: word(),
+		rank: fc.constant("soldier" as const),
 		level: fc.nat(),
 		type: word(),
 		description: description(),

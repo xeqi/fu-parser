@@ -1,6 +1,12 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { tokenizePDF } from "../pdf/lexers/pdf";
-import { importCoreRulebook, importCoreBestiary } from "./pdf-importers/import-core-rulebook";
+import {
+	importCoreRulebook,
+	importCoreBestiary,
+	importHighFantasyBestiary,
+	importTechnoFantasyBestiary,
+	importNaturalFantasyBestiary,
+} from "./pdf-importers/import-core-rulebook";
 import { importItems } from "./pdf-importers/import-items";
 
 // Relative url that foundry serves for the compiled webworker
@@ -29,20 +35,31 @@ const parsePdf = async (pdfPath: string, bookType: BookType): Promise<[ParseResu
 		case "FUCR":
 			return [[...(await importItems(withPage, bookType)), ...(await importCoreBestiary(withPage))], destroy];
 		case "FUHF":
+			return [
+				[...(await importItems(withPage, bookType)), ...(await importHighFantasyBestiary(withPage))],
+				destroy,
+			];
 		case "FUTF":
+			return [
+				[...(await importItems(withPage, bookType)), ...(await importTechnoFantasyBestiary(withPage))],
+				destroy,
+			];
 		case "FUNF":
-			return [await importItems(withPage, bookType), destroy];
+			return [
+				[...(await importItems(withPage, bookType)), ...(await importNaturalFantasyBestiary(withPage))],
+				destroy,
+			];
 	}
 };
 
 export type BookType = (typeof BOOK_TYPES)[number];
 export const BOOK_TYPES = ["FUCR", "FUCR_LEGACY", "FUHF", "FUTF", "FUNF"] as const;
 export const bookTypes = {
-	FUCR: "Core Rulebook (rare items)",
-	FUCR_LEGACY: "Core Rulebook legacy",
-	FUHF: "High Fantasy Atlas",
-	FUTF: "Techno Fantasy Atlas",
-	FUNF: "Natural Fantasy Atlas",
+	FUCR: "Core Rulebook (v1.1)",
+	FUCR_LEGACY: "Core Rulebook (v1.02)",
+	FUHF: "High Fantasy Atlas (v1.1)",
+	FUTF: "Techno Fantasy Atlas (v1.1)",
+	FUNF: "Natural Fantasy Atlas (v1.1)",
 };
 
 type ImportPDFSubmissionData = {
