@@ -607,6 +607,12 @@ export type FUActor = Actor & {
 			accuracy: { value: number; bonus: number };
 			magic: { value: number; bonus: number };
 		};
+		bonuses: {
+			accuracy: {
+				accuracyCheck: number;
+				magicCheck: number;
+			};
+		};
 	} & {
 		resources: {
 			ip: { value: number; min: number; max: number };

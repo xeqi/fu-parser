@@ -176,6 +176,12 @@ export function beastToFuActor(
 				accuracy: { value: 0, bonus: 0 },
 				magic: { value: 0, bonus: 0 },
 			},
+			bonuses: {
+				accuracy: {
+					accuracyCheck: 0,
+					magicCheck: 0,
+				},
+			},
 			traits: { value: b.traits },
 			species: { value: toSpecies(b.type) },
 			useEquipment: { value: b.equipment != null },

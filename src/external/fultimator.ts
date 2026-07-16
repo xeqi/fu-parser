@@ -217,6 +217,23 @@ export type NpcExtra = {
 	magic?: boolean;
 };
 
+export type NpcFeatures = {
+	init?: { enabled?: boolean };
+	precision?: { enabled?: boolean };
+	magic?: { enabled?: boolean };
+};
+
+export type NpcResources = {
+	hp?: { current?: number | string; bonus?: number | string };
+	mp?: { current?: number | string; bonus?: number | string };
+};
+
+export type NpcDerived = {
+	def?: { bonus?: number | string; override?: number | string };
+	mdef?: { bonus?: number | string; override?: number | string };
+	init?: { bonus?: number | string };
+};
+
 export type NpcAffinities = {
 	physical?: Affinities;
 	wind?: Affinities;
@@ -260,6 +277,10 @@ export type Npc = {
 	traits?: string;
 	actions?: NpcAction[];
 	extra?: NpcExtra;
+	features?: NpcFeatures;
+	resources?: NpcResources;
+	derived?: NpcDerived;
+	schemaVersion?: number;
 	spells?: NpcSpell[];
 	special?: NpcSpecial[];
 	weaponattacks?: NpcWeaponAttack[];
