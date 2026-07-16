@@ -324,9 +324,13 @@ const makeSpecialRuleDescription =
 		for (;;) {
 			const t = nextToken(current);
 			if (!t) break;
-			if (isSep(t)) break;
 			if (isImageToken(t)) break;
 			if (isStringToken(t) && ATLAS_SECTION_FONT.test(t.font)) break;
+			if (isSep(t)) {
+				parts.push((t as StringToken).string);
+				current = inc(current);
+				continue;
+			}
 			if (!isDesc(t) && !fonts.boldFonts.some((f) => f.test((t as StringToken).font)) && !isBracket(t)) break;
 			if (isStringToken(t) && fonts.boldFonts.some((f) => f.test(t.font))) {
 				const peek = nextToken(inc(current));
@@ -348,11 +352,18 @@ const makeBeastAttack = (fonts: AtlasFonts) => {
 	const sep = textWithFont(fonts.sep.char, fonts.sep.fonts);
 	const description = makeSpecialRuleDescription(fonts);
 	const { makeAccuracy, makeDamage } = makeBracketParsers(fonts);
+	const rangedIcon = satisfy(
+		(t) =>
+			isStringToken(t) &&
+			((t.string === fonts.rangedIcon.char && fonts.rangedIcon.fonts.some((f) => f.test(t.font))) ||
+				(t.string === "a" && /fabulaultima$/.test(t.font))),
+		"ranged icon",
+	) as Parser<StringToken>;
 	return fmap(
 		seq(
 			alt(
 				fmap(textWithFont(fonts.meleeIcon.char, fonts.meleeIcon.fonts), () => "melee" as const),
-				fmap(many1(textWithFont(fonts.rangedIcon.char, fonts.rangedIcon.fonts)), () => "ranged" as const),
+				fmap(many1(rangedIcon), () => "ranged" as const),
 			),
 			str,
 			kr(sep, makeAccuracy),
@@ -386,6 +397,8 @@ const makeSpecialRule = (fonts: AtlasFonts) => {
 				satisfy(
 					(t) =>
 						isStringToken(t) &&
+						!ATLAS_SECTION_FONT.test(t.font) &&
+						!ATLAS_LEVEL_FONT.test(t.font) &&
 						!(t.string === fonts.sep.char && fonts.sep.fonts.some((f) => f.test(t.font))),
 					"name token",
 				) as Parser<StringToken>,
