@@ -435,7 +435,9 @@ const makeBeastSpells = (fonts: AtlasFonts) => {
 					kr(sep, str),
 					kr(
 						sep,
-						fmap(kl(str, text(".")), (s) => s.toLowerCase()),
+						fmap(alt(kl(str, text(".")), matches(/\.$/, "duration")), (s) =>
+							s.replace(/\.$/, "").toLowerCase(),
+						),
 					),
 					description,
 					alt(opportunity, success(null)),
