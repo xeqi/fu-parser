@@ -15,19 +15,25 @@ export const tokenizePDF = async (
 			const page = await doc.getPage(pageNum);
 
 			const opList = await page.getOperatorList();
+
+			const resolveObject = (id: string): Promise<{ name?: string; width?: number; height?: number } | null> => {
+				const store = id.startsWith("g_") ? page.commonObjs : page.objs;
+				return new Promise((resolve) => {
+					try {
+						store.get(id, (obj: unknown) => resolve((obj as { name?: string } | null) ?? null));
+					} catch {
+						resolve(null);
+					}
+				});
+			};
+
 			const data: { font: string; tokens: Token[] } = { font: "", tokens: [] };
-			opList.fnArray.map((opCode, index) => {
+			for (let index = 0; index < opList.fnArray.length; index++) {
+				const opCode = opList.fnArray[index];
 				const args = opList.argsArray[index];
 				switch (opCode) {
 					case pdfjsLib.OPS.paintImageXObject: {
-						let img: Image | null = null;
-						try {
-							img = page.objs.get(args[0]);
-						} catch (err) {
-							if (args[0].startsWith("g_")) {
-								img = page.commonObjs.get(args[0]);
-							}
-						}
+						const img = (await resolveObject(args[0])) as Image | null;
 						if (img && img.height > 0 && img.width > 0) {
 							const yPosition = findPreviousTransform(index, opList.fnArray, opList.argsArray);
 							data.tokens.push({ kind: "Image", image: img, y: yPosition });
@@ -36,8 +42,8 @@ export const tokenizePDF = async (
 					}
 					case pdfjsLib.OPS.setFont: {
 						if (args[0].startsWith("g_")) {
-							const font = page.commonObjs.get(args[0]);
-							data.font = font.name;
+							const font = await resolveObject(args[0]);
+							if (font?.name) data.font = font.name;
 						}
 						break;
 					}
@@ -56,8 +62,7 @@ export const tokenizePDF = async (
 						break;
 					}
 				}
-				return null;
-			}, []);
+			}
 			const r = await f(data.tokens);
 			return [r, () => page.cleanup()];
 		},

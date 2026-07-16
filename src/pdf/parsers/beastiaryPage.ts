@@ -5,13 +5,16 @@ import {
 	eof,
 	fmap,
 	image,
+	inc,
 	kl,
 	kr,
 	many,
 	many1,
 	matches,
+	nextToken,
 	Parser,
 	peek,
+	result,
 	satisfy,
 	seq,
 	starting,
@@ -25,7 +28,7 @@ import {
 	then,
 	watermark,
 } from "./lib";
-import { isStringToken, StringToken } from "../lexers/token";
+import { isImageToken, isStringToken, StringToken } from "../lexers/token";
 import { Beast, parseBeastRank } from "../model/beast";
 import {
 	AFFINITIES,
@@ -89,6 +92,22 @@ export const FUCR_LEGACY_FONTS: BeastiaryFonts = {
 	},
 };
 
+// Skip leading page-number/ornament/sidebar tokens up to the first [image, name, "Lv N"] beast.
+const fucrPageHeader: Parser<unknown> = (ptr) => {
+	let current = ptr;
+	for (;;) {
+		const t = nextToken(current);
+		if (!t) break;
+		const name = nextToken(inc(current));
+		const lv = nextToken(inc(inc(current)));
+		if (isImageToken(t) && name && isStringToken(name) && lv && isStringToken(lv) && /^Lv \d+/.test(lv.string)) {
+			break;
+		}
+		current = inc(current);
+	}
+	return [result(null, current)];
+};
+
 // Core Rulebook v1.1
 export const FUCR_FONTS: BeastiaryFonts = {
 	meleeIcon: { char: "M", fonts: [/FabulaUltimaicons-Regular$/] },
@@ -104,7 +123,7 @@ export const FUCR_FONTS: BeastiaryFonts = {
 	asideFonts: [/MonotypeCorsiva$/],
 	asideHeaderFonts: [/Antonio-Bold$/],
 	asideAltFonts: [/CreditValley$/],
-	pageHeader: then(image, many(str)),
+	pageHeader: fucrPageHeader,
 	resistanceFonts: { normalFont: /FabulaUltimaicons-Regular$/, nonNormalFont: /Type3$|Glyphter$/ },
 	typeCodes: {
 		physical: { char: "p", fonts: [/FabulaUltimaicons-Regular$/] },
