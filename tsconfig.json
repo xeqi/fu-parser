@@ -20,6 +20,7 @@
         "transform": "typia/lib/transform"
       }
     ],
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "types": ["jest", "jquery"]
   }
 }

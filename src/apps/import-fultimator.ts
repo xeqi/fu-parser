@@ -2415,7 +2415,22 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 	});
 };
 
+const normalizeNpcExtra = (data: Npc) => {
+	const num = (v: number | string | undefined): number => (v === undefined ? 0 : Number(v));
+	return {
+		initEnabled: data.features ? !!data.features.init?.enabled : !!data.extra?.init,
+		precisionEnabled: data.features ? !!data.features.precision?.enabled : !!data.extra?.precision,
+		magicEnabled: data.features ? !!data.features.magic?.enabled : !!data.extra?.magic,
+		extraInit: data.derived ? num(data.derived.init?.bonus) : num(data.extra?.extrainit),
+		defBonus: data.derived ? num(data.derived.def?.bonus) : num(data.extra?.def),
+		mdefBonus: data.derived ? num(data.derived.mdef?.bonus) : num(data.extra?.mDef),
+		hpBonus: data.resources ? num(data.resources.hp?.bonus) : num(data.extra?.hp),
+		mpBonus: data.resources ? num(data.resources.mp?.bonus) : num(data.extra?.mp),
+	};
+};
+
 const importFultimatorNPC = async (data: Npc) => {
+	const npcExtra = normalizeNpcExtra(data);
 	const actorName = getName(data.name, "Unnamed NPC");
 	const { imageFields, rejectedImageUrl } = getActorImageImportFields(actorName, data.imgurl);
 	const actorDescription = prependImageUrlToDescription(parseMarkdown(data.description || ""), rejectedImageUrl);
@@ -2470,13 +2485,13 @@ const importFultimatorNPC = async (data: Npc) => {
 					value: 0,
 					max: 0,
 					min: 0,
-					bonus: data.extra && data.extra.hp ? Number(data.extra.hp) : 0,
+					bonus: npcExtra.hpBonus,
 				},
 				mp: {
 					value: 0,
 					max: 0,
 					min: 0,
-					bonus: data.extra && data.extra.mp ? Number(data.extra.mp) : 0,
+					bonus: npcExtra.mpBonus,
 				},
 				ip: { value: 6, max: 6, min: 0 },
 				fp: { value: 3 },
@@ -2537,14 +2552,18 @@ const importFultimatorNPC = async (data: Npc) => {
 			derived: {
 				init: {
 					value: 0,
-					bonus:
-						(data.extra && data.extra.init ? 4 : 0) +
-						(data.extra && data.extra?.extrainit ? Number(data.extra.extrainit) : 0),
+					bonus: (npcExtra.initEnabled ? 4 : 0) + npcExtra.extraInit,
 				},
-				def: { value: 0, bonus: (data.extra && data.extra.def) || 0 },
-				mdef: { value: 0, bonus: (data.extra && data.extra.mDef) || 0 },
-				accuracy: { value: 0, bonus: data.extra && data.extra.precision ? 3 : 0 },
-				magic: { value: 0, bonus: data.extra && data.extra.magic ? 3 : 0 },
+				def: { value: 0, bonus: npcExtra.defBonus },
+				mdef: { value: 0, bonus: npcExtra.mdefBonus },
+				accuracy: { value: 0, bonus: 0 },
+				magic: { value: 0, bonus: 0 },
+			},
+			bonuses: {
+				accuracy: {
+					accuracyCheck: npcExtra.precisionEnabled ? 3 : 0,
+					magicCheck: npcExtra.magicEnabled ? 3 : 0,
+				},
 			},
 			traits: { value: data.traits || "" },
 			species: { value: data.species.toLowerCase().replace(/^variant\s+/, "") },

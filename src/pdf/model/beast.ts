@@ -11,9 +11,13 @@ import {
 } from "./common";
 import { FUActor, FUItem } from "../../external/project-fu";
 
+export type BeastRank = "soldier" | "elite" | "champion" | "companion" | "custom";
+
 export type Beast = {
 	image: Image;
 	name: string;
+	rank: BeastRank;
+	phases?: number;
 	level: number;
 	type: string;
 	description: string;
@@ -61,6 +65,24 @@ export type Beast = {
 		name: string;
 		description: string;
 	}[];
+};
+
+// "EILEEN (Champion 3)" -> rank; a leading qualifier stays ("EIGHT (VIII, Champion 2)" -> "EIGHT (VIII)").
+export const parseBeastRank = (rawName: string): { name: string; rank: BeastRank; phases?: number } => {
+	const m = rawName.match(/\s*\((?:(.+?),\s*)?(Soldier|Elite|Champion|Companion)(?:\s+(\d+))?\)\s*$/i);
+	if (!m) return { name: rawName.trim(), rank: "soldier" };
+	const [, qualifier, rankWord, phaseStr] = m;
+	const rank = rankWord.toLowerCase() as BeastRank;
+	const base = rawName.slice(0, m.index).trim();
+	const name = qualifier ? `${base} (${qualifier.trim()})` : base;
+	const phases = rank === "champion" && phaseStr ? Number(phaseStr) : undefined;
+	return { name, rank, phases };
+};
+
+const FU_SPECIES = ["beast", "construct", "demon", "elemental", "humanoid", "monster", "plant", "undead"] as const;
+const toSpecies = (type: string): string => {
+	const t = type.toLowerCase().replace(/^variant\s+/, "");
+	return (FU_SPECIES as readonly string[]).includes(t) ? t : "custom";
 };
 
 export function beastToFuActor(
@@ -154,12 +176,22 @@ export function beastToFuActor(
 				accuracy: { value: 0, bonus: 0 },
 				magic: { value: 0, bonus: 0 },
 			},
+			bonuses: {
+				accuracy: {
+					accuracyCheck: 0,
+					magicCheck: 0,
+				},
+			},
 			traits: { value: b.traits },
-			species: { value: b.type.toLowerCase().replace(/^variant\s+/, "") },
+			species: { value: toSpecies(b.type) },
 			useEquipment: { value: b.equipment != null },
 			source: source,
 			villain: { value: "" as const },
-			rank: { value: "soldier" as const, replacedSoldiers: 1 },
+			rank:
+				b.rank === "champion" && b.phases !== undefined
+					? { value: b.rank, replacedSoldiers: b.phases }
+					: { value: b.rank },
+			...(b.phases !== undefined ? { phases: { value: b.phases } } : {}),
 			study: { value: 0 as const },
 		},
 		type: "npc",

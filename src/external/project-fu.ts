@@ -607,6 +607,12 @@ export type FUActor = Actor & {
 			accuracy: { value: number; bonus: number };
 			magic: { value: number; bonus: number };
 		};
+		bonuses: {
+			accuracy: {
+				accuracyCheck: number;
+				magicCheck: number;
+			};
+		};
 	} & {
 		resources: {
 			ip: { value: number; min: number; max: number };
@@ -617,7 +623,7 @@ export type FUActor = Actor & {
 		villain: { value: "" | "supreme" | "minor" | "major" };
 		phases?: { value: number };
 		multipart?: { value: string };
-		rank: { value: "soldier" | "elite" | "champion" | "companion" | "custom"; replacedSoldiers: number };
+		rank: { value: "soldier" | "elite" | "champion" | "companion" | "custom"; replacedSoldiers?: number };
 		useEquipment: { value: boolean };
 		study: { value: 0 };
 		source?: string;

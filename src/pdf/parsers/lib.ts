@@ -80,6 +80,13 @@ export const fmap =
 
 export const eof = (ptr: PTR) => (end(ptr) ? success("eof" as const)(ptr) : fail<"eof">("eof")(ptr));
 
+export const peek =
+	(p: (t: Token) => boolean, reason: string): Parser<void> =>
+	(ptr) => {
+		const t = nextToken(ptr);
+		return t && p(t) ? [result(undefined, ptr)] : fail<void>(reason)(ptr);
+	};
+
 export const many = <R>(p: Parser<R>): Parser<R[]> =>
 	alt(
 		fmap(
@@ -158,19 +165,21 @@ export const sep = textWithFont("w", [/Wingdings-Regular$/]);
 export const matches = (r: RegExp, errorMsg: string) =>
 	fmap(satisfy((t) => isStringToken(t) && r.test(t.string), errorMsg) as Parser<StringToken>, (t) => t.string);
 
-const bonus = alt(
+export const bonus = alt(
 	fmap(satisfy((t) => isStringToken(t) && /\+\d*/.test(t.string), "Accuracy bonus") as Parser<StringToken>, (t) =>
 		Number(t.string.slice(1)),
 	),
 	success(0),
 );
 
-const statsForAccuracy: Parser<[Stat, Stat]> = (ptr: PTR) => {
+export const statsForAccuracy: Parser<[Stat, Stat]> = (ptr: PTR) => {
 	const token = nextToken(ptr);
-	if (token && isStringToken(token) && token.string.length == 9) {
-		const primary = token.string.slice(0, 3);
-		const secondary = token.string.slice(-3);
-		if (isStat(primary) && isStat(secondary)) {
+	if (token && isStringToken(token)) {
+		// Spacing around the "+" is inconsistent in the PDFs ("DEX + MIG", "DEX+ MIG", "DEX+MIG").
+		const compact = token.string.replace(/\s+/g, "");
+		const primary = compact.slice(0, 3);
+		const secondary = compact.slice(-3);
+		if (compact.length === 7 && compact[3] === "+" && isStat(primary) && isStat(secondary)) {
 			return success<[Stat, Stat]>([primary, secondary])(inc(ptr));
 		}
 	}
@@ -183,7 +192,7 @@ export const accuracy = fmap(
 	},
 );
 
-const statsForDamage: Parser<number> = (ptr: PTR) => {
+export const statsForDamage: Parser<number> = (ptr: PTR) => {
 	const token = nextToken(ptr);
 	if (token && isStringToken(token) && /HR \+ \d+/.test(token.string)) {
 		return success(Number(token.string.slice(5)))(inc(ptr));
