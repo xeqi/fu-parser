@@ -7,7 +7,8 @@ import { basicWeapons, rareWeapons } from "../../pdf/parsers/weaponPage";
 import { armorPage } from "../../pdf/parsers/armorPage";
 import { shieldPage } from "../../pdf/parsers/shieldPage";
 import { accessories } from "../../pdf/parsers/accessoryPage";
-import { beastiary, beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
+import { beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
+import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
 import { StringToken, Token } from "../../pdf/lexers/token";
 import { saveAccessories, saveArmors, saveBeasts, saveConsumables, saveShields, saveWeapons } from "./save-utils";
@@ -128,11 +129,9 @@ const PAGES = {
 	279: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
 	280: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
 	281: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	282: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
 	283: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
 	284: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
 	285: [["Equipment", "Shields", "Rare"], (f: Wrapper) => f(shieldPage, saveShields)],
-	286: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
 	287: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
 	288: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
 	289: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],

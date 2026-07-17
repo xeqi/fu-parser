@@ -17,7 +17,6 @@ import {
 	result,
 	satisfy,
 	seq,
-	starting,
 	statsForAccuracy,
 	statsForDamage,
 	str,
@@ -39,7 +38,6 @@ import {
 	DieSize,
 	ResistanceMap,
 	Stat,
-	TYPE_CODES,
 } from "../model/common";
 import { prettifyStrings } from "../parsers-commons";
 
@@ -62,35 +60,6 @@ export interface BeastiaryFonts {
 	resistanceFonts: { normalFont: RegExp; nonNormalFont: RegExp } | null;
 	typeCodes: Record<DamageType, { char: string; fonts: RegExp[] }>;
 }
-
-export const FUCR_LEGACY_FONTS: BeastiaryFonts = {
-	meleeIcon: { char: "$", fonts: [/Evilz$/] },
-	rangedIcon: { char: "a", fonts: [/fabulaultima$/] },
-	spellHeaderIcon: { char: "h", fonts: [/Evilz$/] },
-	spellAccuracyIcon: { char: "r", fonts: [/Heydings-Icons$/] },
-	otherActionIcon: { char: "S", fonts: [/WebSymbols-Regular$/] },
-	sep: { char: "w", fonts: [/Wingdings-Regular$/] },
-	bracketOpen: { char: "【", fonts: [] },
-	bracketClose: { char: "】", fonts: [] },
-	boldFonts: [/PTSans-NarrowBold$/],
-	descriptionFonts: [/PTSans-Narrow$/, /PTSans-NarrowBold$/, /Heydings-Icons$/, /KozMinPro-Regular$/],
-	asideFonts: [/MonotypeCorsiva$/],
-	asideHeaderFonts: [/Antonio-Bold$/],
-	asideAltFonts: [/CreditValley$/],
-	pageHeader: starting,
-	resistanceFonts: null,
-	typeCodes: {
-		physical: { char: TYPE_CODES.physical, fonts: [] },
-		air: { char: TYPE_CODES.air, fonts: [] },
-		bolt: { char: TYPE_CODES.bolt, fonts: [] },
-		dark: { char: TYPE_CODES.dark, fonts: [] },
-		earth: { char: TYPE_CODES.earth, fonts: [] },
-		fire: { char: TYPE_CODES.fire, fonts: [] },
-		ice: { char: TYPE_CODES.ice, fonts: [] },
-		light: { char: TYPE_CODES.light, fonts: [] },
-		poison: { char: TYPE_CODES.poison, fonts: [] },
-	},
-};
 
 // Skip leading page-number/ornament/sidebar tokens up to the first [image, name, "Lv N"] beast.
 const fucrPageHeader: Parser<unknown> = (ptr) => {
@@ -472,5 +441,4 @@ export const makeBeastiary = (fonts: BeastiaryFonts): Parser<Beast[]> => {
 	);
 };
 
-export const beastiary = makeBeastiary(FUCR_LEGACY_FONTS);
 export const beastiaryFUCR = makeBeastiary(FUCR_FONTS);
