@@ -3,7 +3,7 @@ import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Token } from "../lexers/token";
 import { flatMap, isResult } from "./lib";
-import { beastiary } from "./beastiaryPage";
+import { beastiaryFUCR as beastiary } from "./beastiaryPage";
 
 import { DAMAGE_TYPES, DIE_SIZES, Distance, Image, STATS, TYPE_CODES } from "../model/common";
 import { Beast } from "../model/beast";

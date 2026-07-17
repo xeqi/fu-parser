@@ -7,7 +7,7 @@ import { basicWeapons, rareWeapons } from "./weaponPage";
 import { armorPage } from "./armorPage";
 import { shieldPage } from "./shieldPage";
 import { accessories } from "./accessoryPage";
-import { beastiary } from "./beastiaryPage";
+import { beastiaryFUCR as beastiary } from "./beastiaryPage";
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
