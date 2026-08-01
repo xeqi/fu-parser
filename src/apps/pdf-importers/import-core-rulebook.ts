@@ -12,6 +12,7 @@ import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
 import { beastiaryFUBA, beastiaryFUBACompanion } from "../../pdf/parsers/beastiaryPageBestiary";
 import { arcanaFUBA } from "../../pdf/parsers/arcanaPageBestiary";
+import { rulesFUBA, speciesRulesFUBA } from "../../pdf/parsers/rulePageBestiary";
 import { IndexEntry, indexNameKey, parseBeastiaryIndex } from "../../pdf/parsers/beastiaryIndexBestiary";
 import { StringToken, Token } from "../../pdf/lexers/token";
 import {
@@ -20,6 +21,7 @@ import {
 	saveArmors,
 	saveBeasts,
 	saveConsumables,
+	saveRules,
 	saveShields,
 	saveWeapons,
 } from "./save-utils";
@@ -64,6 +66,37 @@ const FUBA_COMPANION_BESTIARY_PAGES = bestiaryPages(beastiaryFUBACompanion, FUBA
 const FUBA_ARCANA_PAGES = [340, 341, 342, 343, 344, 345] as const;
 const FUBA_ARCANA_BESTIARY_PAGES = Object.fromEntries(
 	FUBA_ARCANA_PAGES.map((p) => [p, [["Bestiary Vol.1", "Arcana"], (f: Wrapper) => f(arcanaFUBA, saveArcana)]]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+const FUBA_BOSS_SEEDS: Record<number, string> = {
+	59: "Control Skills",
+	61: "Destructive Skills",
+	63: "Elemental Skills",
+	65: "Objective Skills",
+	67: "Summoner Skills",
+	69: "Survival Skills",
+};
+const FUBA_BOSS_PAGES = [57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69] as const;
+const FUBA_BOSS_SKILL_PAGES = Object.fromEntries(
+	FUBA_BOSS_PAGES.map((p) => [
+		p,
+		[["Bestiary Vol.1", "Boss Skills"], (f: Wrapper) => f(rulesFUBA(FUBA_BOSS_SEEDS[p] ?? ""), saveRules)],
+	]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+// Negative Skills
+const FUBA_NEGATIVE_PAGES = [70, 71] as const;
+const FUBA_NEGATIVE_SKILL_PAGES = Object.fromEntries(
+	FUBA_NEGATIVE_PAGES.map((p) => [
+		p,
+		[["Bestiary Vol.1", "Negative Skills"], (f: Wrapper) => f(rulesFUBA(), saveRules)],
+	]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+// Species Skills
+const FUBA_SPECIES_PAGES = [72, 73, 74, 75] as const;
+const FUBA_SPECIES_SKILL_PAGES = Object.fromEntries(
+	FUBA_SPECIES_PAGES.map((p) => [p, [["Bestiary Vol.1"], (f: Wrapper) => f(speciesRulesFUBA, saveRules)]]),
 ) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
 
 // Beasts whose art is a full-page image on a separate page: cleaned name -> art page.
@@ -400,10 +433,13 @@ export async function importBestiaryVol1(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	const rankIndex = await buildBeastiaryIndex(withPage);
-	const [beasts, companions, arcana] = await Promise.all([
+	const [beasts, companions, arcana, bossSkills, negativeSkills, speciesSkills] = await Promise.all([
 		importPages(FUBA_BESTIARY_PAGES, "FUBA", withPage, FUBA_ART_OVERRIDES, rankIndex),
 		importPages(FUBA_COMPANION_BESTIARY_PAGES, "FUBA", withPage),
 		importPages(FUBA_ARCANA_BESTIARY_PAGES, "FUBA", withPage),
+		importPages(FUBA_BOSS_SKILL_PAGES, "FUBA", withPage),
+		importPages(FUBA_NEGATIVE_SKILL_PAGES, "FUBA", withPage),
+		importPages(FUBA_SPECIES_SKILL_PAGES, "FUBA", withPage),
 	]);
-	return [...beasts, ...companions, ...arcana];
+	return [...beasts, ...companions, ...arcana, ...bossSkills, ...negativeSkills, ...speciesSkills];
 }

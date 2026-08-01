@@ -456,7 +456,15 @@ export type FUItem = Item &
 		  }
 		| {
 				type: "rule";
-				system: Base & HasBehavior & HasProgress;
+				system: Base &
+					HasBehavior &
+					HasProgress & {
+						fuid?: string;
+						summary?: { value: string };
+						showTitleCard?: { value: boolean };
+						hasRoll?: { value: boolean };
+						targeting?: { rule: string; max: number };
+					};
 		  }
 		| {
 				type: "optionalFeature";
