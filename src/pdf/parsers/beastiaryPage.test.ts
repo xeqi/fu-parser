@@ -214,6 +214,7 @@ test("parses generated", () => {
 			const expected: Beast[] = cs.map((v) => {
 				return {
 					...v,
+					immunities: [],
 					description: prettifyStrings(v.description),
 					attacks: v.attacks.map((a) => {
 						return { ...a, description: prettifyStrings(a.description) };

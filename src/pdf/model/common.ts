@@ -64,6 +64,13 @@ export const TYPE_CODES = {
 export type Affinity = (typeof AFFINITIES)[number];
 export const AFFINITIES = ["VU", "N", "RS", "IM", "AB"] as const;
 
+export type StatusEffect = (typeof STATUS_EFFECTS)[number];
+export const STATUS_EFFECTS = ["slow", "dazed", "weak", "shaken", "enraged", "poisoned"] as const;
+
+export type Role = (typeof ROLES)[number];
+export const ROLES = ["brute", "hunter", "mage", "saboteur", "sentinel", "support"] as const;
+export type ActorRole = Role | "custom";
+
 export type ResistanceMap = Record<DamageType, Affinity>;
 
 export const DIE_SIZES = [6, 8, 10, 12] as const;

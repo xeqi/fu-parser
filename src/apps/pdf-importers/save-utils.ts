@@ -1,5 +1,15 @@
 import { FUItem, getFolder, saveImage } from "../../external/project-fu";
 import { Beast, beastToFuActor } from "../../pdf/model/beast";
+
+const usedImageNames = new Set<string>();
+const uniqueImageName = (name: string): string => {
+	let candidate = name;
+	for (let n = 2; usedImageNames.has(candidate); n++) {
+		candidate = `${name}-${n}`;
+	}
+	usedImageNames.add(candidate);
+	return candidate;
+};
 import { Consumable, consumableToFuItem } from "../../pdf/model/consumable";
 import { Weapon, weaponToFuItem } from "../../pdf/model/weapon";
 import { Armor, armorToFuItem } from "../../pdf/model/armor";
@@ -131,14 +141,17 @@ export const saveBeasts = async (
 	imagePath: string,
 ) => {
 	for (const b of beasts) {
-		const folder = await getFolder([...folderNames, b.type], "Actor");
+		const subfolder = b.rank === "companion" ? "COMPANION" : b.type;
+		const folder = await getFolder([...folderNames, subfolder], "Actor");
 		if (folder) {
-			const [payload, otherItems, equipment] = beastToFuActor(b, imagePath, folder._id, source);
-			await saveImage(b.image, b.name + ".png", imagePath);
+			const imageName = uniqueImageName(b.name);
+			const [payload, otherItems, equipment] = beastToFuActor(b, imagePath, folder._id, source, imageName);
+			await saveImage(b.image, imageName + ".png", imagePath);
 			const actor = await Actor.create(payload);
+			await actor.rest(true);
 
-			actor.createEmbeddedDocuments("Item", otherItems);
-			actor.createEmbeddedDocuments("Item", equipment);
+			await actor.createEmbeddedDocuments("Item", otherItems);
+			await actor.createEmbeddedDocuments("Item", equipment);
 		}
 	}
 };

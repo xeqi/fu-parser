@@ -2409,10 +2409,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		...quirkItems,
 	]);
 
-	await actor.update({
-		"system.resources.hp.value": actor.system.resources.hp.max,
-		"system.resources.mp.value": actor.system.resources.mp.max,
-	});
+	await actor.rest(true);
 };
 
 const normalizeNpcExtra = (data: Npc) => {
@@ -2764,10 +2761,7 @@ const importFultimatorNPC = async (data: Npc) => {
 
 	await actor.createEmbeddedDocuments("Item", equipment);
 
-	await actor.update({
-		"system.resources.hp.value": actor.system.resources.hp.max,
-		"system.resources.mp.value": actor.system.resources.mp.max,
-	});
+	await actor.rest(true);
 };
 
 // Define DataType as an enum
