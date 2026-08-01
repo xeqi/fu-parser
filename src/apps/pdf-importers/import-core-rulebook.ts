@@ -11,9 +11,18 @@ import { beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
 import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
 import { beastiaryFUBA, beastiaryFUBACompanion } from "../../pdf/parsers/beastiaryPageBestiary";
+import { arcanaFUBA } from "../../pdf/parsers/arcanaPageBestiary";
 import { IndexEntry, indexNameKey, parseBeastiaryIndex } from "../../pdf/parsers/beastiaryIndexBestiary";
 import { StringToken, Token } from "../../pdf/lexers/token";
-import { saveAccessories, saveArmors, saveBeasts, saveConsumables, saveShields, saveWeapons } from "./save-utils";
+import {
+	saveAccessories,
+	saveArcana,
+	saveArmors,
+	saveBeasts,
+	saveConsumables,
+	saveShields,
+	saveWeapons,
+} from "./save-utils";
 import { ParseResult } from "../import-pdf";
 
 type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
@@ -52,6 +61,10 @@ const FUNF_BESTIARY_PAGES = bestiaryPages(beastiaryFUNF, FUNF_PAGES, "Natural Fa
 const FUBA_BESTIARY_PAGES = bestiaryPages(beastiaryFUBA, FUBA_PAGES, "Bestiary Vol.1");
 const FUBA_COMPANION_PAGES = [330, 331, 332, 333, 334, 335, 336, 337, 338] as const;
 const FUBA_COMPANION_BESTIARY_PAGES = bestiaryPages(beastiaryFUBACompanion, FUBA_COMPANION_PAGES, "Bestiary Vol.1");
+const FUBA_ARCANA_PAGES = [340, 341, 342, 343, 344, 345] as const;
+const FUBA_ARCANA_BESTIARY_PAGES = Object.fromEntries(
+	FUBA_ARCANA_PAGES.map((p) => [p, [["Bestiary Vol.1", "Arcana"], (f: Wrapper) => f(arcanaFUBA, saveArcana)]]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
 
 // Beasts whose art is a full-page image on a separate page: cleaned name -> art page.
 const FUHF_ART_OVERRIDES: Record<string, number> = {
@@ -387,9 +400,10 @@ export async function importBestiaryVol1(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	const rankIndex = await buildBeastiaryIndex(withPage);
-	const [beasts, companions] = await Promise.all([
+	const [beasts, companions, arcana] = await Promise.all([
 		importPages(FUBA_BESTIARY_PAGES, "FUBA", withPage, FUBA_ART_OVERRIDES, rankIndex),
 		importPages(FUBA_COMPANION_BESTIARY_PAGES, "FUBA", withPage),
+		importPages(FUBA_ARCANA_BESTIARY_PAGES, "FUBA", withPage),
 	]);
-	return [...beasts, ...companions];
+	return [...beasts, ...companions, ...arcana];
 }

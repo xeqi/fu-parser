@@ -17,6 +17,7 @@ import { Accessory, accessoryToFuItem } from "../../pdf/model/accessory";
 import { Shield, shieldToFuItem } from "../../pdf/model/shield";
 import { WeaponModule, weaponModuleToFuItem } from "../../pdf/model/weapon-module";
 import { CampActivity, campActivityToFuItem } from "../../pdf/model/camp-activity";
+import { Arcanum, arcanumToFuItem } from "../../pdf/model/arcanum";
 
 export const saveConsumables = async (
 	categories: [string, Consumable[]][],
@@ -129,6 +130,22 @@ export const saveCampActivities = async (
 	if (folder) {
 		for (const data of campActivities) {
 			const payload: FUItem = campActivityToFuItem(data, folder._id, source);
+			await Item.create(payload);
+		}
+	}
+};
+
+export const saveArcana = async (
+	arcana: Arcanum[],
+	source: string,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
+	const folder = await getFolder(folderNames, "Item");
+	if (folder) {
+		for (const data of arcana) {
+			await saveImage(data.image, data.name + ".png", imagePath);
+			const payload: FUItem = arcanumToFuItem(data, imagePath, folder._id, source);
 			await Item.create(payload);
 		}
 	}
