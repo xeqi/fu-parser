@@ -1,13 +1,16 @@
 import {
 	Accuracy,
 	AFF_MAPPING,
+	DAMAGE_TYPES,
 	DamageType,
 	DieSize,
 	Distance,
 	Image,
 	ResistanceMap,
+	Role,
 	Stat,
 	STAT_MAPPING,
+	StatusEffect,
 } from "./common";
 import { FUActor, FUItem } from "../../external/project-fu";
 
@@ -17,6 +20,8 @@ export type Beast = {
 	image: Image;
 	name: string;
 	rank: BeastRank;
+	role?: Role;
+	villain?: "minor" | "major" | "supreme";
 	phases?: number;
 	level: number;
 	type: string;
@@ -35,6 +40,7 @@ export type Beast = {
 		mdef: number;
 	};
 	resists: ResistanceMap;
+	immunities: StatusEffect[];
 	equipment: string[] | null;
 	attacks: {
 		range: Distance;
@@ -79,6 +85,17 @@ export const parseBeastRank = (rawName: string): { name: string; rank: BeastRank
 	return { name, rank, phases };
 };
 
+// Matches "(HR + N) <type> damage".
+const parseSpellDamage = (description: string): { value: number; type: DamageType } | null => {
+	const typeAlternation = DAMAGE_TYPES.join("|");
+	const re = new RegExp(`\\(\\s*HR\\s*[+＋]\\s*(\\d+)\\s*\\)\\s*(${typeAlternation})\\s+damage`, "i");
+	const m = description.match(re);
+	if (!m) return null;
+	return { value: Number(m[1]), type: m[2].toLowerCase() as DamageType };
+};
+
+const spellIgnoresResistances = (description: string): boolean => /ignores?\s+Resistances?/i.test(description);
+
 const FU_SPECIES = ["beast", "construct", "demon", "elemental", "humanoid", "monster", "plant", "undead"] as const;
 const toSpecies = (type: string): string => {
 	const t = type.toLowerCase().replace(/^variant\s+/, "");
@@ -90,11 +107,12 @@ export function beastToFuActor(
 	imagePath: string,
 	folderId: string,
 	source: string,
+	imageName: string = b.name,
 ): [FUActor, FUItem[], FUItem[]] {
 	const equipment = extractBeastEquipment(b);
 	const initBonus = calculateInitBonus(b, equipment);
+	const rankMultiplier = b.rank === "elite" ? 2 : b.rank === "champion" ? b.phases ?? 1 : 1;
 	const calculatedMaxHp = 2 * b.level + 5 * b.attributes.mig;
-
 	const calculatedMaxMp = b.level + 5 * b.attributes.wlp;
 	const beastActor: FUActor = {
 		system: {
@@ -105,13 +123,13 @@ export function beastToFuActor(
 					value: b.attributes.maxHp,
 					max: calculatedMaxHp,
 					min: 0,
-					bonus: b.attributes.maxHp - calculatedMaxHp,
+					bonus: b.attributes.maxHp / rankMultiplier - calculatedMaxHp,
 				},
 				mp: {
 					value: b.attributes.maxMp,
 					max: calculatedMaxMp,
 					min: 0,
-					bonus: b.attributes.maxMp - calculatedMaxMp,
+					bonus: b.attributes.maxMp / (b.rank === "champion" ? 2 : 1) - calculatedMaxMp,
 				},
 				ip: { value: 6, max: 6, min: 0 },
 				fp: { value: 3 },
@@ -183,21 +201,28 @@ export function beastToFuActor(
 				},
 			},
 			traits: { value: b.traits },
+			immunities: Object.fromEntries(b.immunities.map((status) => [status, { base: true }])) as Record<
+				StatusEffect,
+				{ base: true }
+			>,
 			species: { value: toSpecies(b.type) },
 			useEquipment: { value: b.equipment != null },
 			source: source,
-			villain: { value: "" as const },
+			villain: { value: b.villain ?? "" },
 			rank:
 				b.rank === "champion" && b.phases !== undefined
 					? { value: b.rank, replacedSoldiers: b.phases }
-					: { value: b.rank },
+					: b.rank === "companion"
+						? { value: b.rank, replacedSoldiers: 1 }
+						: { value: b.rank },
 			...(b.phases !== undefined ? { phases: { value: b.phases } } : {}),
+			role: { value: b.role ?? "custom" },
 			study: { value: 0 as const },
 		},
 		type: "npc",
 		name: b.name,
-		img: imagePath + "/" + b.name + ".png",
-		prototypeToken: { texture: { src: imagePath + "/" + b.name + ".png" } },
+		img: imagePath + "/" + imageName + ".png",
+		prototypeToken: { texture: { src: imagePath + "/" + imageName + ".png" } },
 		folder: folderId,
 	};
 
@@ -226,6 +251,8 @@ export function beastToFuActor(
 			const { targetingRule, maxTargets } = determineTargeting(spell.target);
 			const { amount, perTarget } = parseMpCost(spell.mp);
 			const isPerTargetCost = maxTargets > 1 || perTarget;
+			const damage = spell.accuracy !== null ? parseSpellDamage(spell.description) : null;
+			const traits = damage !== null && spellIgnoresResistances(spell.description) ? ["ignore-resistances"] : [];
 			return {
 				type: "spell" as const,
 				name: spell.name,
@@ -253,11 +280,19 @@ export function beastToFuActor(
 										secondary: { value: STAT_MAPPING[spell.accuracy.secondary] },
 									},
 									accuracy: { value: spell.accuracy.bonus },
+									...(damage !== null && {
+										damage: {
+											hasDamage: { value: true },
+											value: damage.value,
+											type: { value: damage.type },
+										},
+									}),
 								},
 					description: spell.description,
 					isBehavior: false,
 					weight: { value: 1 },
 					quality: { value: spell.opportunity || ("" as const) },
+					...(traits.length > 0 && { traits }),
 				},
 			};
 		}),

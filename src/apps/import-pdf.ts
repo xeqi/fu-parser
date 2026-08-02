@@ -6,6 +6,7 @@ import {
 	importHighFantasyBestiary,
 	importTechnoFantasyBestiary,
 	importNaturalFantasyBestiary,
+	importBestiaryVol1,
 } from "./pdf-importers/import-core-rulebook";
 import { importItems } from "./pdf-importers/import-items";
 
@@ -49,17 +50,20 @@ const parsePdf = async (pdfPath: string, bookType: BookType): Promise<[ParseResu
 				[...(await importItems(withPage, bookType)), ...(await importNaturalFantasyBestiary(withPage))],
 				destroy,
 			];
+		case "FUBA":
+			return [await importBestiaryVol1(withPage), destroy];
 	}
 };
 
 export type BookType = (typeof BOOK_TYPES)[number];
-export const BOOK_TYPES = ["FUCR", "FUCR_LEGACY", "FUHF", "FUTF", "FUNF"] as const;
+export const BOOK_TYPES = ["FUCR", "FUCR_LEGACY", "FUHF", "FUTF", "FUNF", "FUBA"] as const;
 export const bookTypes = {
 	FUCR: "Core Rulebook (v1.1)",
 	FUCR_LEGACY: "Core Rulebook (v1.02)",
 	FUHF: "High Fantasy Atlas (v1.1)",
 	FUTF: "Techno Fantasy Atlas (v1.1)",
 	FUNF: "Natural Fantasy Atlas (v1.1)",
+	FUBA: "Bestiary Vol.1",
 };
 
 type ImportPDFSubmissionData = {

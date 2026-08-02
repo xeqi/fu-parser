@@ -15,6 +15,12 @@ export const convertCosts = (s: string) => {
 	}
 };
 
+export const titleCase = (s: string): string =>
+	s
+		.toLowerCase()
+		.replace(/\b\w/g, (c) => c.toUpperCase())
+		.trim();
+
 export const prettifyStrings = (lines: string[]): string => {
 	return lines
 		.reduce((acc, line) => {

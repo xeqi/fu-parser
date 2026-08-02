@@ -537,6 +537,7 @@ export const makeAtlasBeastiary = (fonts: AtlasFonts): Parser<Beast[]> => {
 				traits,
 				attributes,
 				resists,
+				immunities: [],
 				equipment,
 				attacks,
 				spells,

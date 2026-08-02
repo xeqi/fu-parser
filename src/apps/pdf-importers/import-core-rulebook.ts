@@ -10,8 +10,21 @@ import { accessories } from "../../pdf/parsers/accessoryPage";
 import { beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
 import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
+import { beastiaryFUBA, beastiaryFUBACompanion, extractArtPageQuickRef } from "../../pdf/parsers/beastiaryPageBestiary";
+import { arcanaFUBA } from "../../pdf/parsers/arcanaPageBestiary";
+import { rulesFUBA, speciesRulesFUBA, roleSkillsFUBA } from "../../pdf/parsers/rulePageBestiary";
+import { IndexEntry, indexNameKey, parseBeastiaryIndex } from "../../pdf/parsers/beastiaryIndexBestiary";
 import { StringToken, Token } from "../../pdf/lexers/token";
-import { saveAccessories, saveArmors, saveBeasts, saveConsumables, saveShields, saveWeapons } from "./save-utils";
+import {
+	saveAccessories,
+	saveArcana,
+	saveArmors,
+	saveBeasts,
+	saveConsumables,
+	saveRules,
+	saveShields,
+	saveWeapons,
+} from "./save-utils";
 import { ParseResult } from "../import-pdf";
 
 type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
@@ -31,6 +44,12 @@ const FUCR_BESTIARY_PAGES = Object.fromEntries(
 const FUHF_PAGES = [172, 173, 174, 175, 178, 182, 183, 184, 188, 189, 190, 191, 194, 196, 197, 198] as const;
 const FUTF_PAGES = [188, 189, 190, 194, 195, 196, 200, 201, 204, 205, 206, 207, 212, 213, 214, 215] as const;
 const FUNF_PAGES = [180, 181, 186, 187, 190, 191, 192, 193, 196, 197, 198, 199, 203, 205, 207] as const;
+const FUBA_PAGES = [
+	89, 90, 91, 93, 96, 97, 100, 101, 104, 105, 107, 109, 111, 113, 115, 118, 119, 120, 123, 126, 127, 131, 132, 133,
+	135, 137, 139, 141, 144, 148, 149, 152, 153, 156, 157, 158, 159, 162, 163, 165, 167, 169, 171, 173, 176, 177, 178,
+	179, 181, 183, 186, 187, 190, 191, 193, 197, 198, 199, 202, 203, 204, 205, 207, 209, 211, 214, 215, 216, 217, 219,
+	221, 223, 225, 228, 229, 231, 235, 236, 237,
+] as const;
 
 const bestiaryPages = (parser: typeof beastiaryFUCR, pages: readonly number[], folder: string) =>
 	Object.fromEntries(pages.map((p) => [p, [[folder], (f: Wrapper) => f(parser, saveBeasts)]])) as Record<
@@ -41,6 +60,66 @@ const bestiaryPages = (parser: typeof beastiaryFUCR, pages: readonly number[], f
 const FUHF_BESTIARY_PAGES = bestiaryPages(beastiaryFUHF, FUHF_PAGES, "High Fantasy Bestiary");
 const FUTF_BESTIARY_PAGES = bestiaryPages(beastiaryFUTF, FUTF_PAGES, "Techno Fantasy Bestiary");
 const FUNF_BESTIARY_PAGES = bestiaryPages(beastiaryFUNF, FUNF_PAGES, "Natural Fantasy Bestiary");
+const FUBA_BESTIARY_PAGES = bestiaryPages(beastiaryFUBA, FUBA_PAGES, "Bestiary Vol.1");
+const FUBA_COMPANION_PAGES = [330, 331, 332, 333, 334, 335, 336, 337, 338] as const;
+const FUBA_COMPANION_BESTIARY_PAGES = bestiaryPages(beastiaryFUBACompanion, FUBA_COMPANION_PAGES, "Bestiary Vol.1");
+const FUBA_ARCANA_PAGES = [340, 341, 342, 343, 344, 345] as const;
+const FUBA_ARCANA_BESTIARY_PAGES = Object.fromEntries(
+	FUBA_ARCANA_PAGES.map((p) => [p, [["Bestiary Vol.1", "Arcana"], (f: Wrapper) => f(arcanaFUBA, saveArcana)]]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+const FUBA_BOSS_SEEDS: Record<number, string> = {
+	59: "Control Skills",
+	61: "Destructive Skills",
+	63: "Elemental Skills",
+	65: "Objective Skills",
+	67: "Summoner Skills",
+	69: "Survival Skills",
+};
+const FUBA_BOSS_PAGES = [57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69] as const;
+const FUBA_BOSS_SKILL_PAGES = Object.fromEntries(
+	FUBA_BOSS_PAGES.map((p) => [
+		p,
+		[["Bestiary Vol.1", "Boss Skills"], (f: Wrapper) => f(rulesFUBA(FUBA_BOSS_SEEDS[p] ?? ""), saveRules)],
+	]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+// Negative Skills
+const FUBA_NEGATIVE_PAGES = [70, 71] as const;
+const FUBA_NEGATIVE_SKILL_PAGES = Object.fromEntries(
+	FUBA_NEGATIVE_PAGES.map((p) => [
+		p,
+		[["Bestiary Vol.1", "Negative Skills"], (f: Wrapper) => f(rulesFUBA("Negative Skills"), saveRules)],
+	]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+// Species Skills
+const FUBA_SPECIES_PAGES = [72, 73, 74, 75] as const;
+const FUBA_SPECIES_SKILL_PAGES = Object.fromEntries(
+	FUBA_SPECIES_PAGES.map((p) => [p, [["Bestiary Vol.1"], (f: Wrapper) => f(speciesRulesFUBA, saveRules)]]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+const FUBA_ROLE_SKILL_SEEDS: Record<number, string> = {
+	34: "Brute",
+	35: "Brute",
+	38: "Hunter",
+	39: "Hunter",
+	42: "Mage",
+	43: "Mage",
+	46: "Saboteur",
+	47: "Saboteur",
+	50: "Sentinel",
+	51: "Sentinel",
+	54: "Support",
+	55: "Support",
+};
+const FUBA_ROLE_SKILL_PAGES = [34, 35, 38, 39, 42, 43, 46, 47, 50, 51, 54, 55] as const;
+const FUBA_ROLE_SKILLS_PAGES = Object.fromEntries(
+	FUBA_ROLE_SKILL_PAGES.map((p) => [
+		p,
+		[["Bestiary Vol.1", "Role Skills"], (f: Wrapper) => f(roleSkillsFUBA(FUBA_ROLE_SKILL_SEEDS[p]), saveRules)],
+	]),
+) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
 
 // Beasts whose art is a full-page image on a separate page: cleaned name -> art page.
 const FUHF_ART_OVERRIDES: Record<string, number> = {
@@ -82,11 +161,108 @@ const FUNF_ART_OVERRIDES: Record<string, number> = {
 	"ELDGREN, THE ANCIENT": 201,
 };
 
-const largestImage = (tokens: Token[]): Image | null => {
+const FUBA_ART_OVERRIDES: Record<string, number> = {
+	HEAD: 89,
+	ARACHNE: 92,
+	"ARBOREAL DRAGON": 94,
+	"ARSENAL COBRA": 98,
+	"TOWERING APPARATUS": 102,
+	BALOR: 106,
+	BAROMETZ: 108,
+	BASILISK: 110,
+	"BLOOD MANTIS": 112,
+	"BOMB HORNET": 114,
+	ECHINOKORE: 116,
+	DORNRÖSCHEN: 119,
+	BUGABOO: 122,
+	HELLKNIGHT: 128,
+	DIABLOSAUR: 134,
+	DOOMWALL: 136,
+	"DREAD SERAPH": 138,
+	DYNAGUAR: 140,
+	GRENDEL: 150,
+	"GHOST SHIP": 157,
+	GIGANTES: 160,
+	GORGON: 164,
+	HARPY: 166,
+	HYDRA: 168,
+	ICHTHYODAIMON: 170,
+	IUDEX: 172,
+	KAISERWURM: 180,
+	KELPIE: 182,
+	MAGNATOAD: 192,
+	"MELLOW PWIHNCE": 194,
+	MINOTAUR: 206,
+	MULTIGROA: 208,
+	NECRODRAGON: 210,
+	"ASMODEUS OF LUST": 218,
+	"BEELZEBUB OF GLUTTONY": 220,
+	"MAMMON OF GREED": 222,
+	"BELPHEGOR OF SLOTH": 224,
+	"SAMAEL OF PRIDE": 230,
+	"TRUE DEMIURGE SAMAEL": 232,
+	PHALANX: 244,
+	PHOENIX: 246,
+	POLLENDINA: 248,
+	ZU: 250,
+	REASSEMBLER: 256,
+	SCARABRUTUS: 258,
+	SCRAPROID: 260,
+	JORMUNGANDR: 262,
+	SHROOMBLADE: 266,
+	"HEAD (GASHADOKURO)": 268,
+	ARCHMAGE: 274,
+	SPHINX: 280,
+	TREANT: 282,
+	UNDINE: 288,
+	UNICORN: 290,
+	BLUTSAUGER: 292,
+	WALPURGISGRAS: 296,
+	"LOWER HEAD (AMPHISBAENA)": 312,
+	"UPPER HEAD (AMPHISBAENA)": 312,
+	GUIVRE: 310,
+	"RING OF ETERNITY": 316,
+	ZIRNITRA: 316,
+	GOG: 320,
+};
+
+// The Bestiary vol.1 cross-reference table (book pages 352-356 => PDF pages 354-358).
+const FUBA_INDEX_PAGES = [354, 355, 356, 357, 358] as const;
+
+const buildBeastiaryIndex = async (
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<Record<string, IndexEntry>> => {
+	const index: Record<string, IndexEntry> = {};
+	for (const page of FUBA_INDEX_PAGES) {
+		const [rows, cleanup] = await withPage(page, async (tokens) => parseBeastiaryIndex(tokens));
+		Object.assign(index, rows);
+		cleanup();
+	}
+	return index;
+};
+
+const applyRankIndex = (beasts: Beast[], index: Record<string, IndexEntry>): void => {
+	for (const beast of beasts) {
+		const entry = index[indexNameKey(beast.name)];
+		if (!entry) continue;
+		beast.rank = entry.rank;
+		if (entry.phases !== undefined) beast.phases = entry.phases;
+		else delete beast.phases;
+		if (entry.role !== undefined) beast.role = entry.role;
+	}
+};
+
+const bestImage = (tokens: Token[]): Image | null => {
+	const images = tokens.filter(isImageToken).map((t) => t.image);
+	const dimKey = (img: Image) => `${img.width}x${img.height}`;
+	const counts = new Map<string, number>();
+	for (const img of images) counts.set(dimKey(img), (counts.get(dimKey(img)) ?? 0) + 1);
+	const candidates = images.filter((img) => counts.get(dimKey(img)) === 1);
+	const pool = candidates.length > 0 ? candidates : images;
+
 	let best: Image | null = null;
-	for (const t of tokens) {
-		if (!isImageToken(t)) continue;
-		if (!best || t.image.width * t.image.height > best.width * best.height) best = t.image;
+	for (const img of pool) {
+		if (!best || img.width * img.height > best.width * best.height) best = img;
 	}
 	return best;
 };
@@ -97,18 +273,24 @@ const applyArtOverrides = async (
 	overrides: Record<string, number>,
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<(() => boolean)[]> => {
-	const cache = new Map<number, Image | null>();
+	const cache = new Map<number, { image: Image | null; quickRef: string | null }>();
 	const cleanups: (() => boolean)[] = [];
 	for (const beast of beasts) {
 		const artPage = overrides[beast.name];
 		if (artPage === undefined) continue;
 		if (!cache.has(artPage)) {
-			const [img, cleanup] = await withPage(artPage, async (tokens) => largestImage(tokens));
-			cache.set(artPage, img);
+			const [entry, cleanup] = await withPage(artPage, async (tokens) => ({
+				image: bestImage(tokens),
+				quickRef: extractArtPageQuickRef(tokens),
+			}));
+			cache.set(artPage, entry);
 			cleanups.push(cleanup);
 		}
-		const img = cache.get(artPage);
-		if (img) beast.image = img;
+		const entry = cache.get(artPage);
+		if (entry?.image) beast.image = entry.image;
+		if (entry?.quickRef && !beast.description.startsWith("▲")) {
+			beast.description = `${entry.quickRef}<br>${beast.description}`.trim();
+		}
 	}
 	return cleanups;
 };
@@ -174,6 +356,7 @@ function importPages(
 	sourcePrefix: string,
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 	artOverrides?: Record<string, number>,
+	rankIndex?: Record<string, IndexEntry>,
 ): Promise<ParseResult[]> {
 	return Promise.all(
 		Object.entries(pages).map(([pageNumStr, [folders, f]]) => {
@@ -185,6 +368,9 @@ function importPages(
 					const parses = parser([data, 0]);
 					const successes = parses.filter(isResult);
 					if (successes.length == 1) {
+						if (rankIndex) {
+							applyRankIndex(successes[0].result[0] as unknown as Beast[], rankIndex);
+						}
 						if (artOverrides) {
 							artCleanups.push(
 								...(await applyArtOverrides(
@@ -269,4 +455,28 @@ export function importNaturalFantasyBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	return importPages(FUNF_BESTIARY_PAGES, "FUNF", withPage, FUNF_ART_OVERRIDES);
+}
+
+export async function importBestiaryVol1(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	const rankIndex = await buildBeastiaryIndex(withPage);
+	const [beasts, companions, arcana, bossSkills, negativeSkills, speciesSkills, roleSkills] = await Promise.all([
+		importPages(FUBA_BESTIARY_PAGES, "FUBA", withPage, FUBA_ART_OVERRIDES, rankIndex),
+		importPages(FUBA_COMPANION_BESTIARY_PAGES, "FUBA", withPage),
+		importPages(FUBA_ARCANA_BESTIARY_PAGES, "FUBA", withPage),
+		importPages(FUBA_BOSS_SKILL_PAGES, "FUBA", withPage),
+		importPages(FUBA_NEGATIVE_SKILL_PAGES, "FUBA", withPage),
+		importPages(FUBA_SPECIES_SKILL_PAGES, "FUBA", withPage),
+		importPages(FUBA_ROLE_SKILLS_PAGES, "FUBA", withPage),
+	]);
+	return [
+		...beasts,
+		...companions,
+		...arcana,
+		...bossSkills,
+		...negativeSkills,
+		...speciesSkills,
+		...roleSkills,
+	];
 }

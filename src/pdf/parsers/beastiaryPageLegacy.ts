@@ -195,6 +195,7 @@ const beastParser: Parser<Beast> = fmap(
 			traits,
 			attributes,
 			resists,
+			immunities: [],
 			equipment,
 			attacks,
 			spells,

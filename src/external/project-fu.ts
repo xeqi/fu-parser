@@ -33,6 +33,7 @@ declare global {
 			body?: { [key: string]: string | Blob },
 			options?: { notify?: boolean },
 		): Promise<null | false | Response | Record<string, never>>;
+		createDirectory(source: string, target: string, options?: { [key: string]: unknown }): Promise<string>;
 	};
 	class FormApplication<T> {
 		constructor(object?: T, options?: unknown);
@@ -53,6 +54,7 @@ type Folder = {
 type Document = {
 	createEmbeddedDocuments<T extends Item>(type: "Item", data: T[]): Promise<T[]>;
 	update(data: unknown): Promise<void>;
+	rest(ip?: boolean): Promise<unknown>;
 };
 
 type Item = {
@@ -92,6 +94,21 @@ export const getFolder = async (folders: readonly string[], type: string) => {
 	return folder;
 };
 
+const ensuredDirectories = new Set<string>();
+const ensureDirectory = async (source: string, path: string): Promise<void> => {
+	if (!path || ensuredDirectories.has(path)) return;
+	let current = "";
+	for (const segment of path.split("/").filter((s) => s.length > 0)) {
+		current = current ? `${current}/${segment}` : segment;
+		try {
+			await FilePicker.createDirectory(source, current, {});
+		} catch {
+			// Segment already exists
+		}
+	}
+	ensuredDirectories.add(path);
+};
+
 export const saveImage = async (
 	img: Image,
 	name: string,
@@ -111,6 +128,7 @@ export const saveImage = async (
 				});
 			});
 			if (blob) {
+				await ensureDirectory("data", imagePath);
 				return FilePicker.upload("data", imagePath, new File([blob], name), {}, { notify: false });
 			}
 		}
@@ -407,6 +425,7 @@ export type FUItem = Item &
 						isOffensive: { value: boolean };
 						quality: { value: string };
 						summary?: { value: string };
+						traits?: string[];
 					};
 		  }
 		| {
@@ -437,7 +456,15 @@ export type FUItem = Item &
 		  }
 		| {
 				type: "rule";
-				system: Base & HasBehavior & HasProgress;
+				system: Base &
+					HasBehavior &
+					HasProgress & {
+						fuid?: string;
+						summary?: { value: string };
+						showTitleCard?: { value: boolean };
+						hasRoll?: { value: boolean };
+						targeting?: { rule: string; max: number };
+					};
 		  }
 		| {
 				type: "optionalFeature";
@@ -619,11 +646,13 @@ export type FUActor = Actor & {
 			fp: { value: number };
 		};
 		traits: { value: string };
+		immunities?: Partial<Record<"slow" | "dazed" | "weak" | "shaken" | "enraged" | "poisoned", { base: boolean }>>;
 		species: { value: string };
 		villain: { value: "" | "supreme" | "minor" | "major" };
 		phases?: { value: number };
 		multipart?: { value: string };
 		rank: { value: "soldier" | "elite" | "champion" | "companion" | "custom"; replacedSoldiers?: number };
+		role?: { value: "brute" | "hunter" | "mage" | "saboteur" | "sentinel" | "support" | "custom" };
 		useEquipment: { value: boolean };
 		study: { value: 0 };
 		source?: string;

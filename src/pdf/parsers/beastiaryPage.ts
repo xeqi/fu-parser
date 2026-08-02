@@ -399,6 +399,7 @@ export const makeBeastiary = (fonts: BeastiaryFonts): Parser<Beast[]> => {
 				traits,
 				attributes,
 				resists,
+				immunities: [],
 				equipment,
 				attacks,
 				spells,
