@@ -30,8 +30,9 @@ export const saveConsumables = async (
 		const folder = await getFolder([...folderNames, category], "Item");
 		if (folder) {
 			for (const data of consumables) {
-				await saveImage(data.image, data.name + ".png", imagePath);
+				const src = await saveImage(data.image, data.name + ".png", imagePath);
 				const payload: FUItem = consumableToFuItem(data, imagePath, folder._id, source);
+				if (src) payload.img = src;
 				await Item.create(payload);
 			}
 		}
@@ -47,9 +48,10 @@ export const saveWeapons = async (
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of weapons) {
-			const saved = await saveImage(data.image, data.name + ".png", imagePath);
-			if (saved && Object.keys(saved).length != 0) {
+			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			if (src) {
 				const payload: FUItem = weaponToFuItem(data, imagePath, folder._id, source);
+				payload.img = src;
 				await Item.create(payload);
 			}
 		}
@@ -65,8 +67,9 @@ export const saveArmors = async (
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of armors) {
-			await saveImage(data.image, data.name + ".png", imagePath);
+			const src = await saveImage(data.image, data.name + ".png", imagePath);
 			const payload: FUItem = armorToFuItem(data, imagePath, folder._id, source);
+			if (src) payload.img = src;
 			await Item.create(payload);
 		}
 	}
@@ -81,8 +84,9 @@ export const saveAccessories = async (
 	for (const data of accessories) {
 		const folder = await getFolder(folderNames, "Item");
 		if (folder) {
-			await saveImage(data.image, data.name + ".png", imagePath);
+			const src = await saveImage(data.image, data.name + ".png", imagePath);
 			const payload: FUItem = accessoryToFuItem(data, imagePath, folder._id, source);
+			if (src) payload.img = src;
 			await Item.create(payload);
 		}
 	}
@@ -97,8 +101,9 @@ export const saveShields = async (
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of shields) {
-			await saveImage(data.image, data.name + ".png", imagePath);
+			const src = await saveImage(data.image, data.name + ".png", imagePath);
 			const payload: FUItem = shieldToFuItem(data, imagePath, folder._id, source);
+			if (src) payload.img = src;
 			await Item.create(payload);
 		}
 	}
@@ -145,8 +150,9 @@ export const saveArcana = async (
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of arcana) {
-			await saveImage(data.image, data.name + ".png", imagePath);
+			const src = await saveImage(data.image, data.name + ".png", imagePath);
 			const payload: FUItem = arcanumToFuItem(data, imagePath, folder._id, source);
+			if (src) payload.img = src;
 			await Item.create(payload);
 		}
 	}
@@ -175,7 +181,11 @@ export const saveBeasts = async (
 		if (folder) {
 			const imageName = uniqueImageName(b.name);
 			const [payload, otherItems, equipment] = beastToFuActor(b, imagePath, folder._id, source, imageName);
-			await saveImage(b.image, imageName + ".png", imagePath);
+			const src = await saveImage(b.image, imageName + ".png", imagePath);
+			if (src) {
+				payload.img = src;
+				if (payload.prototypeToken) payload.prototypeToken.texture.src = src;
+			}
 			const actor = await Actor.create(payload);
 			await actor.rest(true);
 

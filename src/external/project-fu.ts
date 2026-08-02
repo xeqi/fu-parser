@@ -15,6 +15,7 @@ declare global {
 	const Folder: { create(payload: { name: string; type: string; folder?: string }): Promise<Folder> };
 	const Item: { create<T extends Item>(payload: T): Promise<T & Document> };
 	const Actor: { create<T extends Actor>(payload: T): Promise<T & Document> };
+	type UploadResult = { path: string } | null | false | Record<string, never>;
 	const FilePicker: {
 		/**
 		 * Dispatch a POST request to the server containing a directory path and a file to upload
@@ -32,7 +33,7 @@ declare global {
 			file: File,
 			body?: { [key: string]: string | Blob },
 			options?: { notify?: boolean },
-		): Promise<null | false | Response | Record<string, never>>;
+		): Promise<UploadResult>;
 		createDirectory(source: string, target: string, options?: { [key: string]: unknown }): Promise<string>;
 	};
 	class FormApplication<T> {
@@ -109,11 +110,7 @@ const ensureDirectory = async (source: string, path: string): Promise<void> => {
 	ensuredDirectories.add(path);
 };
 
-export const saveImage = async (
-	img: Image,
-	name: string,
-	imagePath: string,
-): Promise<false | Response | Record<string, never> | null> => {
+export const saveImage = async (img: Image, name: string, imagePath: string): Promise<string | false> => {
 	try {
 		const canvas = document.createElement("canvas");
 		canvas.width = img.width;
@@ -129,7 +126,16 @@ export const saveImage = async (
 			});
 			if (blob) {
 				await ensureDirectory("data", imagePath);
-				return FilePicker.upload("data", imagePath, new File([blob], name), {}, { notify: false });
+				const result = await FilePicker.upload(
+					"data",
+					imagePath,
+					new File([blob], name),
+					{},
+					{ notify: false },
+				);
+				if (result && typeof result === "object" && "path" in result && typeof result.path === "string") {
+					return result.path;
+				}
 			}
 		}
 	} catch (err) {
