@@ -1,7 +1,7 @@
 import { eof, inc, nextToken, Parser, result, watermark } from "./lib";
 import { isImageToken, isStringToken, StringToken, Token } from "../lexers/token";
 import { Rule } from "../model/rule";
-import { prettifyStrings } from "../parsers-commons";
+import { prettifyStrings, titleCase } from "../parsers-commons";
 
 const FU_ICONS = /FabulaUltimaicons-Regular$/;
 const TYPE3 = /Type3$/;
@@ -66,12 +66,6 @@ const captionAndBody = (ptr: [Token[], number]): [string, string, [Token[], numb
 	return [caption, prettifyStrings(bodyParts), current];
 };
 
-const titleCase = (s: string): string =>
-	s
-		.toLowerCase()
-		.replace(/\b\w/g, (c) => c.toUpperCase())
-		.trim();
-
 export const rulesFUBA =
 	(seedCategory = ""): Parser<Rule[]> =>
 	(ptr) => {
@@ -92,7 +86,7 @@ export const rulesFUBA =
 				continue;
 			}
 			if (isRuleStart(current)) {
-				const name = (t as StringToken).string.trim();
+				const name = titleCase((t as StringToken).string);
 				const [caption, description, next] = captionAndBody(inc(current));
 				out.push({ image: { width: 0, height: 0 }, name, category, caption, description });
 				current = next;
@@ -174,3 +168,121 @@ export const speciesRulesFUBA: Parser<Rule[]> = (ptr) => {
 	}
 	return [result(out, current)];
 };
+
+const ROLE_SKILLS_HEADING = /^ROLE SKILLS:\s*(.+)$/;
+const CUSTOMIZATION_HEADING = /^CUSTOMIZATION$/;
+
+const isSkillSectionHeading = (t: Token | null): boolean =>
+	!!t && isStringToken(t) && (isDesc(t) || isName(t)) && isSkillSectionHeadingText(t.string.trim());
+
+const isSkillSectionHeadingText = (s: string): boolean => ROLE_SKILLS_HEADING.test(s) || CUSTOMIZATION_HEADING.test(s);
+
+const NAMED_BULLET = /^(.+?)\s*\((special rule|unique action)\)$/;
+
+const FU_ICON_BULLET_CHARS = new Set(["•", "-"]);
+const isFuIconBulletChar = (t: Token | null): boolean =>
+	!!t && isStringToken(t) && FU_ICONS.test(t.font) && FU_ICON_BULLET_CHARS.has(t.string);
+const isPotentialSectionBullet = (t: Token | null): boolean => isBullet(t) || isFuIconBulletChar(t);
+const isSectionBulletMarker = (t: Token | null, marker: string | null): boolean =>
+	isBullet(t) ? marker === "wingdings" : isFuIconBulletChar(t) && (t as StringToken).string === marker;
+
+export const roleSkillsFUBA =
+	(seedRole = ""): Parser<Rule[]> =>
+	(ptr) => {
+		const out: Rule[] = [];
+		let current = ptr;
+		let roleName = seedRole;
+		let inSection = false;
+		let marker: string | null = null;
+		let unnamedCount = 0;
+		let pendingName: [string, "rule" | "miscAbility"] | null = null;
+		for (;;) {
+			const t = nextToken(current);
+			if (!t) break;
+			if (isRunningHead(t)) break;
+			if (isStringToken(t) && (isDesc(t) || isName(t))) {
+				const m = ROLE_SKILLS_HEADING.exec(t.string.trim());
+				if (m) roleName = titleCase(m[1]);
+			}
+			if (isSkillSectionHeading(t)) {
+				inSection = true;
+				marker = null;
+				current = inc(current);
+				continue;
+			}
+			if (!inSection || !roleName) {
+				current = inc(current);
+				continue;
+			}
+			if (marker === null) {
+				if (!isPotentialSectionBullet(t)) {
+					current = inc(current);
+					continue;
+				}
+				marker = isBullet(t) ? "wingdings" : (t as StringToken).string;
+			} else if (!isSectionBulletMarker(t, marker)) {
+				current = inc(current);
+				continue;
+			}
+			current = inc(current);
+			const parts: string[] = [];
+			for (;;) {
+				const n = nextToken(current);
+				if (!n) break;
+				if (isSectionBulletMarker(n, marker) || isRunningHead(n) || isImageToken(n) || isSkillSectionHeading(n))
+					break;
+				if (isInlineIcon(n)) {
+					current = inc(current);
+					continue;
+				}
+				if (!isDesc(n)) break;
+				parts.push((n as StringToken).string);
+				current = inc(current);
+			}
+			if (parts.length === 0) continue;
+			const first = parts[0].trim();
+			const named = NAMED_BULLET.exec(first);
+			if (named && parts.length === 1) {
+				pendingName = [named[1], named[2] === "unique action" ? "miscAbility" : "rule"];
+				continue;
+			}
+			if (named) {
+				const itemType = named[2] === "unique action" ? "miscAbility" : "rule";
+				out.push({
+					image: { width: 0, height: 0 },
+					name: named[1],
+					category: roleName,
+					caption: "",
+					description: prettifyStrings([named[1], ...parts.slice(1)]),
+					itemType,
+				});
+				continue;
+			}
+			if (pendingName) {
+				const [name, itemType] = pendingName;
+				pendingName = null;
+				out.push({
+					image: { width: 0, height: 0 },
+					name,
+					category: roleName,
+					caption: "",
+					description: prettifyStrings(parts),
+					itemType,
+				});
+				continue;
+			}
+			unnamedCount += 1;
+			out.push({
+				image: { width: 0, height: 0 },
+				name: `${roleName} Role Skill (${unnamedCount})`,
+				category: roleName,
+				caption: "",
+				description: prettifyStrings(parts),
+				itemType: "rule",
+			});
+		}
+		if (out.length === 0) {
+			return [{ error: "role skill", distance: ptr[1], found: "<eof>" }];
+		}
+		return [result(out, current)];
+	};

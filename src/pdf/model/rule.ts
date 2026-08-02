@@ -9,6 +9,7 @@ export type Rule = {
 	caption: string; // italic flavour line
 	description: string; // body text
 	bullets?: string[];
+	itemType?: "rule" | "miscAbility";
 };
 
 const slugify = (name: string): string =>
@@ -25,6 +26,22 @@ const ruleHtml = (r: Rule): string => {
 };
 
 export function ruleToFuItem(r: Rule, imagePath: string, folderId: string, source: string): FUItem {
+	if (r.itemType === "miscAbility") {
+		return {
+			type: "miscAbility",
+			name: r.name,
+			img: "icons/svg/item-bag.svg",
+			folder: folderId,
+			system: {
+				description: ruleHtml(r),
+				isBehavior: false,
+				weight: { value: 1 },
+				hasClock: { value: false },
+				hasRoll: { value: false },
+				source: source,
+			},
+		};
+	}
 	return {
 		type: "rule",
 		name: r.name,

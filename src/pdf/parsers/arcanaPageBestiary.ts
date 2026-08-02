@@ -2,7 +2,7 @@ import { eof, fmap, inc, isResult, kr, nextToken, Parse, Parser, result, seq, wa
 import { isImageToken, isStringToken, StringToken, Token } from "../lexers/token";
 import { Arcanum } from "../model/arcanum";
 import { Image } from "../model/common";
-import { prettifyStrings } from "../parsers-commons";
+import { prettifyStrings, titleCase } from "../parsers-commons";
 
 const FU_ICONS = /FabulaUltimaicons-Regular$/;
 const TYPE3 = /Type3$/;
@@ -167,7 +167,7 @@ const arcanumParser: Parser<Arcanum> = fmap(
 	),
 	([image, name, caption, domains, merge, dismiss]) => ({
 		image,
-		name: name.trim(),
+		name: titleCase(name),
 		caption: caption.trim(),
 		domains: domains.trim(),
 		merge,
