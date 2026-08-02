@@ -222,6 +222,44 @@ const quickReference: Parser<string> = alt(
 	success(""),
 );
 
+const ART_PAGE_NAME_FONT = /PTSans-Narrow$/;
+const SEE_INDIVIDUAL_ENTRIES = /see individual entries\.?$/i;
+
+export const extractArtPageQuickRef = (tokens: Token[]): string | null => {
+	let i = tokens.findIndex((t) => isStringToken(t) && ART_PAGE_NAME_FONT.test(t.font));
+	if (i === -1) return null;
+	i++;
+	const level = tokens[i];
+	if (!level || !isStringToken(level) || !isBold(level) || !/^Lv \d+$/.test(level.string.trim())) return null;
+	i++;
+	while (isSepToken(tokens[i])) {
+		const tag = tokens[i + 1];
+		if (!tag || !isStringToken(tag) || !isBold(tag)) return null;
+		i += 2;
+	}
+	const readLine = (glyph: string): string | null => {
+		if (!isQuickRefIcon(tokens[i], glyph) || !isQuickRefIcon(tokens[i + 1], glyph)) return null;
+		i += 2;
+		const parts: string[] = [];
+		while (
+			tokens[i] &&
+			isStringToken(tokens[i]) &&
+			isDesc(tokens[i] as StringToken) &&
+			!isQuickRefIcon(tokens[i], "7")
+		) {
+			parts.push((tokens[i] as StringToken).string);
+			i++;
+		}
+		return prettifyStrings(parts);
+	};
+	const resist = readLine("6");
+	const weak = readLine("7");
+	if (resist === null && weak === null) return null;
+	if ((resist && SEE_INDIVIDUAL_ENTRIES.test(resist)) || (weak && SEE_INDIVIDUAL_ENTRIES.test(weak))) return null;
+	const lines = [resist ? `▲ ${resist}` : null, weak ? `▼ ${weak}` : null].filter((s): s is string => !!s);
+	return lines.length ? lines.join("<br>") : null;
+};
+
 const beastAttribute = (stat: string) =>
 	fmap(matches(new RegExp(`^${stat} d(${DIE_SIZES.join("|")})`), stat), (s) =>
 		Number(s.slice(stat.length + 2)),

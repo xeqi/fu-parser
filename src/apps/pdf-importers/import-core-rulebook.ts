@@ -10,7 +10,7 @@ import { accessories } from "../../pdf/parsers/accessoryPage";
 import { beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
 import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
-import { beastiaryFUBA, beastiaryFUBACompanion } from "../../pdf/parsers/beastiaryPageBestiary";
+import { beastiaryFUBA, beastiaryFUBACompanion, extractArtPageQuickRef } from "../../pdf/parsers/beastiaryPageBestiary";
 import { arcanaFUBA } from "../../pdf/parsers/arcanaPageBestiary";
 import { rulesFUBA, speciesRulesFUBA, roleSkillsFUBA } from "../../pdf/parsers/rulePageBestiary";
 import { IndexEntry, indexNameKey, parseBeastiaryIndex } from "../../pdf/parsers/beastiaryIndexBestiary";
@@ -273,18 +273,24 @@ const applyArtOverrides = async (
 	overrides: Record<string, number>,
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<(() => boolean)[]> => {
-	const cache = new Map<number, Image | null>();
+	const cache = new Map<number, { image: Image | null; quickRef: string | null }>();
 	const cleanups: (() => boolean)[] = [];
 	for (const beast of beasts) {
 		const artPage = overrides[beast.name];
 		if (artPage === undefined) continue;
 		if (!cache.has(artPage)) {
-			const [img, cleanup] = await withPage(artPage, async (tokens) => bestImage(tokens));
-			cache.set(artPage, img);
+			const [entry, cleanup] = await withPage(artPage, async (tokens) => ({
+				image: bestImage(tokens),
+				quickRef: extractArtPageQuickRef(tokens),
+			}));
+			cache.set(artPage, entry);
 			cleanups.push(cleanup);
 		}
-		const img = cache.get(artPage);
-		if (img) beast.image = img;
+		const entry = cache.get(artPage);
+		if (entry?.image) beast.image = entry.image;
+		if (entry?.quickRef && !beast.description.startsWith("▲")) {
+			beast.description = `${entry.quickRef}<br>${beast.description}`.trim();
+		}
 	}
 	return cleanups;
 };
