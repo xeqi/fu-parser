@@ -90,9 +90,11 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 			this.object.pdfPath = data.pdfPath;
 			this.object.bookType = data.bookType;
 			this.render();
-			const [results, destroy] = await parsePdf(this.object.pdfPath, this.object.bookType);
-			this.object.parseResults = results;
-			this.object.destroy = destroy;
+			if (this.object.pdfPath !== "") {
+				const [results, destroy] = await parsePdf(this.object.pdfPath, this.object.bookType);
+				this.object.parseResults = results;
+				this.object.destroy = destroy;
+			}
 		}
 		this.render();
 	}
