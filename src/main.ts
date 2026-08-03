@@ -74,7 +74,14 @@ Hooks.on("renderSettings", async (_app, html) => {
 
 		template.content.querySelector("[data-action=openPdfImporter]")!.addEventListener("click", () => {
 			const application = new ImportPDFApplication(
-				{ pdfPath: "", imagePath: "", bookType: "FUCR", parseResults: [], inProgress: false, bookTypes },
+				{
+					pdfPath: "",
+					imagePath: "extracted",
+					bookType: "FUCR",
+					parseResults: [],
+					inProgress: false,
+					bookTypes,
+				},
 				{
 					width: 450,
 					height: 600,
@@ -114,7 +121,14 @@ Hooks.on("renderSettings", async (_app, html) => {
 		importPDFButton.append("Import PDF");
 		importPDFButton.addEventListener("click", () => {
 			const application = new ImportPDFApplication(
-				{ pdfPath: "", imagePath: "", bookType: "FUCR", parseResults: [], inProgress: false, bookTypes },
+				{
+					pdfPath: "",
+					imagePath: "extracted",
+					bookType: "FUCR",
+					parseResults: [],
+					inProgress: false,
+					bookTypes,
+				},
 				{
 					width: 450,
 					height: 600,

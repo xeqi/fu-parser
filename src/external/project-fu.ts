@@ -35,6 +35,18 @@ declare global {
 			options?: { notify?: boolean },
 		): Promise<UploadResult>;
 		createDirectory(source: string, target: string, options?: { [key: string]: unknown }): Promise<string>;
+		browse(
+			source: string,
+			target: string,
+			options?: { [key: string]: unknown },
+		): Promise<{ target: string; dirs: string[]; files: string[] }>;
+	};
+	const ui: {
+		notifications: {
+			error(message: string, options?: { permanent?: boolean }): void;
+			warn(message: string, options?: { permanent?: boolean }): void;
+			info(message: string, options?: { permanent?: boolean }): void;
+		};
 	};
 	class FormApplication<T> {
 		constructor(object?: T, options?: unknown);
@@ -95,7 +107,14 @@ export const getFolder = async (folders: readonly string[], type: string) => {
 	return folder;
 };
 
+// Collapse a user-provided path into a clean relative path FilePicker accepts.
+export const normalizeImagePath = (path: string): string =>
+	path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
+
 const ensuredDirectories = new Set<string>();
+
+// Create each missing segment of `path`, then confirm with browse. createDirectory
+// throws both for existing dirs and real failures, so browse is what tells them apart.
 const ensureDirectory = async (source: string, path: string): Promise<void> => {
 	if (!path || ensuredDirectories.has(path)) return;
 	let current = "";
@@ -104,13 +123,34 @@ const ensureDirectory = async (source: string, path: string): Promise<void> => {
 		try {
 			await FilePicker.createDirectory(source, current, {});
 		} catch {
-			// Segment already exists
+			// Already exists, or failed for another reason.
 		}
+	}
+	try {
+		await FilePicker.browse(source, path);
+	} catch {
+		throw new Error(
+			`Could not create or access the image directory "${path}" under the "${source}" source. ` +
+				`Check that the path is valid and that your user has permission to upload files.`,
+		);
 	}
 	ensuredDirectories.add(path);
 };
 
+// Report a directory failure once per path.
+const reportedDirectoryErrors = new Set<string>();
 export const saveImage = async (img: Image, name: string, imagePath: string): Promise<string | false> => {
+	const path = normalizeImagePath(imagePath);
+	try {
+		await ensureDirectory("data", path);
+	} catch (err) {
+		console.log(err);
+		if (!reportedDirectoryErrors.has(path)) {
+			reportedDirectoryErrors.add(path);
+			ui.notifications.error(err instanceof Error ? err.message : String(err), { permanent: true });
+		}
+		return false;
+	}
 	try {
 		const canvas = document.createElement("canvas");
 		canvas.width = img.width;
@@ -125,14 +165,7 @@ export const saveImage = async (img: Image, name: string, imagePath: string): Pr
 				});
 			});
 			if (blob) {
-				await ensureDirectory("data", imagePath);
-				const result = await FilePicker.upload(
-					"data",
-					imagePath,
-					new File([blob], name),
-					{},
-					{ notify: false },
-				);
+				const result = await FilePicker.upload("data", path, new File([blob], name), {}, { notify: false });
 				if (result && typeof result === "object" && "path" in result && typeof result.path === "string") {
 					return result.path;
 				}

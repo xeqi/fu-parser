@@ -48,7 +48,9 @@ const FUBA_PAGES = [
 	89, 90, 91, 93, 96, 97, 100, 101, 104, 105, 107, 109, 111, 113, 115, 118, 119, 120, 123, 126, 127, 131, 132, 133,
 	135, 137, 139, 141, 144, 148, 149, 152, 153, 156, 157, 158, 159, 162, 163, 165, 167, 169, 171, 173, 176, 177, 178,
 	179, 181, 183, 186, 187, 190, 191, 193, 197, 198, 199, 202, 203, 204, 205, 207, 209, 211, 214, 215, 216, 217, 219,
-	221, 223, 225, 228, 229, 231, 235, 236, 237,
+	221, 223, 225, 228, 229, 231, 235, 236, 237, 238, 242, 243, 245, 247, 249, 252, 253, 254, 255, 257, 259, 261, 264,
+	265, 267, 270, 271, 272, 273, 276, 277, 278, 279, 281, 283, 286, 287, 289, 291, 294, 295, 297, 300, 301, 302, 303,
+	306, 307, 308, 309, 312, 313, 314, 315, 318, 319, 322, 323, 324, 325,
 ] as const;
 
 const bestiaryPages = (parser: typeof beastiaryFUCR, pages: readonly number[], folder: string) =>
@@ -218,6 +220,9 @@ const FUBA_ART_OVERRIDES: Record<string, number> = {
 	UNICORN: 290,
 	BLUTSAUGER: 292,
 	WALPURGISGRAS: 296,
+	HOVERCYCLE: 300,
+	"LEGS (MMP)": 302,
+	"BODY (MMP)": 302,
 	"LOWER HEAD (AMPHISBAENA)": 312,
 	"UPPER HEAD (AMPHISBAENA)": 312,
 	GUIVRE: 310,
@@ -470,13 +475,5 @@ export async function importBestiaryVol1(
 		importPages(FUBA_SPECIES_SKILL_PAGES, "FUBA", withPage),
 		importPages(FUBA_ROLE_SKILLS_PAGES, "FUBA", withPage),
 	]);
-	return [
-		...beasts,
-		...companions,
-		...arcana,
-		...bossSkills,
-		...negativeSkills,
-		...speciesSkills,
-		...roleSkills,
-	];
+	return [...beasts, ...companions, ...arcana, ...bossSkills, ...negativeSkills, ...speciesSkills, ...roleSkills];
 }
