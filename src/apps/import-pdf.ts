@@ -9,6 +9,7 @@ import {
 	importBestiaryVol1,
 } from "./pdf-importers/import-core-rulebook";
 import { importItems } from "./pdf-importers/import-items";
+import { normalizeImagePath } from "../external/project-fu";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -146,9 +147,10 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 			e.preventDefault();
 			this.object.inProgress = true;
 			this.render();
+			const imagePath = normalizeImagePath(this.object.imagePath);
 			for (const p of this.object.parseResults) {
 				if (p.type === "success") {
-					await p.save(this.object.imagePath);
+					await p.save(imagePath);
 				}
 			}
 			this.close();
