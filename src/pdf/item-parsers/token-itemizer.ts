@@ -40,12 +40,13 @@ export function itemizeTokens(tokens: Token[]): [Map<ItemCategory, ItemToken[]>,
 	return [itemsByCategory, optionalWeaponCategory];
 }
 
-// Used to filter out the elements with fonts in which things like page number, watermark, table headers are written
+// Used to filter out the elements with fonts in which things like page number, watermark, table headers and flavor callouts (MonotypeCorsiva) are written
 const isItemElement = (token: StringToken) =>
 	!token.font.includes("Helvetica") &&
 	!token.font.includes("Antonio-Regular") &&
 	!token.font.includes("Antonio-Bold") &&
-	!token.font.includes("BodoniOrnaments");
+	!token.font.includes("BodoniOrnaments") &&
+	!token.font.includes("MonotypeCorsiva");
 
 function divideTokensByCategory(stringTokens: StringToken[]): Map<ItemCategory, StringToken[]> {
 	return stringTokens.reduce(

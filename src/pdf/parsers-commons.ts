@@ -3,12 +3,13 @@ import { StringToken } from "./lexers/token";
 export const isMartial = (token: StringToken) =>
 	(token.font.includes("BasicShapes1") && token.string === "E") ||
 	(token.font.includes("Type3") && token.string === "W");
-export const convertDashOrNumber = (s: string) => (s === "-" ? 0 : Number(s));
+export const isDash = (s: string) => s === "-" || s === "–" || s === "—";
+export const convertDashOrNumber = (s: string) => (isDash(s) ? 0 : Number(s));
 
 export const convertCosts = (s: string) => {
 	if (s.endsWith(" z")) {
 		return Number(s.slice(0, -2));
-	} else if (s === "-") {
+	} else if (isDash(s)) {
 		return 0;
 	} else {
 		return Number(s);

@@ -3,6 +3,7 @@ import { tokenizePDF } from "../pdf/lexers/pdf";
 import {
 	importCoreRulebook,
 	importCoreBestiary,
+	importCoreBasicEquipment,
 	importHighFantasyBestiary,
 	importTechnoFantasyBestiary,
 	importNaturalFantasyBestiary,
@@ -35,7 +36,14 @@ const parsePdf = async (pdfPath: string, bookType: BookType): Promise<[ParseResu
 		case "FUCR_LEGACY":
 			return [await importCoreRulebook(withPage), destroy];
 		case "FUCR":
-			return [[...(await importItems(withPage, bookType)), ...(await importCoreBestiary(withPage))], destroy];
+			return [
+				[
+					...(await importItems(withPage, bookType)),
+					...(await importCoreBasicEquipment(withPage)),
+					...(await importCoreBestiary(withPage)),
+				],
+				destroy,
+			];
 		case "FUHF":
 			return [
 				[...(await importItems(withPage, bookType)), ...(await importHighFantasyBestiary(withPage))],

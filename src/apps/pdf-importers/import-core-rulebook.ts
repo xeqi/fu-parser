@@ -8,6 +8,7 @@ import { armorPage } from "../../pdf/parsers/armorPage";
 import { shieldPage } from "../../pdf/parsers/shieldPage";
 import { accessories } from "../../pdf/parsers/accessoryPage";
 import { beastiaryFUCR } from "../../pdf/parsers/beastiaryPage";
+import { basicWeaponsV11, consumablesV11 } from "../../pdf/parsers/basicEquipmentPage";
 import { beastiary } from "../../pdf/parsers/beastiaryPageLegacy";
 import { beastiaryFUHF, beastiaryFUTF, beastiaryFUNF } from "../../pdf/parsers/beastiaryPageAtlas";
 import { beastiaryFUBA, beastiaryFUBACompanion, extractArtPageQuickRef } from "../../pdf/parsers/beastiaryPageBestiary";
@@ -40,6 +41,12 @@ const BESTIARY_PAGES = [
 const FUCR_BESTIARY_PAGES = Object.fromEntries(
 	BESTIARY_PAGES.map((p) => [p, [["Beastiary"], (f: Wrapper) => f(beastiaryFUCR, saveBeasts)]]),
 ) as Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
+
+const FUCR_BASIC_EQUIPMENT_PAGES = {
+	106: [["Core Rulebook Equipment", "Consumables"], (f: Wrapper) => f(consumablesV11, saveConsumables)],
+	132: [["Core Rulebook Equipment", "Weapons"], (f: Wrapper) => f(basicWeaponsV11, saveWeapons)],
+	133: [["Core Rulebook Equipment", "Weapons"], (f: Wrapper) => f(basicWeaponsV11, saveWeapons)],
+} as const satisfies Record<number, [readonly string[], (f: Wrapper) => Promise<ParseResult>]>;
 
 const FUHF_PAGES = [172, 173, 174, 175, 178, 182, 183, 184, 188, 189, 190, 191, 194, 196, 197, 198] as const;
 const FUTF_PAGES = [188, 189, 190, 194, 195, 196, 200, 201, 204, 205, 206, 207, 212, 213, 214, 215] as const;
@@ -442,6 +449,12 @@ export function importCoreBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
 	return importPages(FUCR_BESTIARY_PAGES, "FUCR", withPage);
+}
+
+export function importCoreBasicEquipment(
+	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
+): Promise<ParseResult[]> {
+	return importPages(FUCR_BASIC_EQUIPMENT_PAGES, "FUCR", withPage);
 }
 
 export function importHighFantasyBestiary(

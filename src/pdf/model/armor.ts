@@ -1,5 +1,6 @@
 import { Image } from "./common";
 import { FUItem } from "../../external/project-fu";
+import { isDash } from "../parsers-commons";
 
 export type Armor = {
 	image: Image;
@@ -19,7 +20,7 @@ export const convertDef = (prefix: string) => (s: string) => {
 	} else if (s.startsWith(prefix + " die")) {
 		const num = s.slice(9);
 		return num === "" ? 0 : Number(num);
-	} else return s === "-" ? 0 : Number(s);
+	} else return isDash(s) ? 0 : Number(s);
 };
 
 export function armorToFuItem(data: Armor, imagePath: string, folderId: string, source: string): FUItem {

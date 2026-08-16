@@ -174,7 +174,7 @@ const makeBeastResistances = (fonts: BeastiaryFonts): Parser<ResistanceMap> => {
 	}, success({})) as Parser<ResistanceMap>;
 };
 
-const DESCRIPTION_LINE_EXCLUSIONS = /^(Opportunity:|Typical Traits:)/;
+const DESCRIPTION_LINE_EXCLUSIONS = /^(Opportunity:|(Typical )?Traits:)/;
 
 const makeDescriptionLine = (fonts: BeastiaryFonts) =>
 	fmap(
@@ -320,7 +320,7 @@ const makeBeastSpells = (fonts: BeastiaryFonts) => {
 						sep,
 						alt(
 							fmap(kl(str, text(".")), (s) => s.toLowerCase()),
-							fmap(str, (s) => s.replace(/\.$/, "").toLowerCase()),
+							fmap(matches(/\.$/, "duration"), (s) => s.replace(/\.$/, "").toLowerCase()),
 						),
 					),
 					description,
@@ -357,7 +357,7 @@ export const makeBeastiary = (fonts: BeastiaryFonts): Parser<Beast[]> => {
 			fmap(matches(/^Lv \d+/, "Level"), (s) => Number(s.slice(3))),
 			kr(sep, str),
 			description,
-			kr(text("Typical Traits:"), str),
+			kr(matches(/^(Typical )?Traits:$/, "Traits"), str),
 			beastAttributes,
 			beastResistances,
 			alt(
