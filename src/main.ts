@@ -73,40 +73,25 @@ Hooks.on("renderSettings", async (_app, html) => {
         `;
 
 		template.content.querySelector("[data-action=openPdfImporter]")!.addEventListener("click", () => {
-			const application = new ImportPDFApplication(
-				{
-					pdfPath: "",
-					imagePath: "extracted",
-					bookType: "FUCR",
-					parseResults: [],
-					inProgress: false,
-					bookTypes,
-				},
-				{
-					width: 450,
-					height: 600,
-					submitOnChange: true,
-					closeOnSubmit: false,
-					title: "Fabula Ultima PDF importer",
-					resizable: true,
-				},
-			);
-			application.render(true);
+			const application = new ImportPDFApplication({
+				pdfPath: "",
+				imagePath: "extracted",
+				bookType: "FUCR",
+				parseResults: [],
+				inProgress: false,
+				bookTypes,
+			});
+			application.render({ force: true });
 		});
 
 		template.content.querySelector("[data-action=openFultimatorImporter]")!.addEventListener("click", () => {
-			const application = new FultimatorImportApplication(
-				{ text: "", dataType: undefined, inProgress: false, preferCompendium: true },
-				{
-					width: 450,
-					height: 600,
-					submitOnChange: true,
-					closeOnSubmit: false,
-					title: "Fultimator import",
-					resizable: true,
-				},
-			);
-			application.render(true);
+			const application = new FultimatorImportApplication({
+				text: "",
+				dataType: undefined,
+				inProgress: false,
+				preferCompendium: true,
+			});
+			application.render({ force: true });
 		});
 
 		(html as HTMLElement).querySelector("#settings > section.documentation.flexcol")?.after(template.content);
@@ -120,43 +105,28 @@ Hooks.on("renderSettings", async (_app, html) => {
 		importPDFButton.type = "button";
 		importPDFButton.append("Import PDF");
 		importPDFButton.addEventListener("click", () => {
-			const application = new ImportPDFApplication(
-				{
-					pdfPath: "",
-					imagePath: "extracted",
-					bookType: "FUCR",
-					parseResults: [],
-					inProgress: false,
-					bookTypes,
-				},
-				{
-					width: 450,
-					height: 600,
-					submitOnChange: true,
-					closeOnSubmit: false,
-					title: "Fabula Ultima PDF importer",
-					resizable: true,
-				},
-			);
-			application.render(true);
+			const application = new ImportPDFApplication({
+				pdfPath: "",
+				imagePath: "extracted",
+				bookType: "FUCR",
+				parseResults: [],
+				inProgress: false,
+				bookTypes,
+			});
+			application.render({ force: true });
 		});
 
 		const importFultimatorButton = document.createElement("button");
 		importFultimatorButton.type = "button";
 		importFultimatorButton.append("Import Fultimator");
 		importFultimatorButton.addEventListener("click", () => {
-			const application = new FultimatorImportApplication(
-				{ text: "", dataType: undefined, inProgress: false, preferCompendium: true },
-				{
-					width: 450,
-					height: 600,
-					submitOnChange: true,
-					closeOnSubmit: false,
-					title: "Fultimator import",
-					resizable: true,
-				},
-			);
-			application.render(true);
+			const application = new FultimatorImportApplication({
+				text: "",
+				dataType: undefined,
+				inProgress: false,
+				preferCompendium: true,
+			});
+			application.render({ force: true });
 		});
 		const div = document.createElement("div");
 		div.appendChild(importPDFButton);

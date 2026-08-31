@@ -1,35 +1,33 @@
-<form>
-    <div style="display:flex; flex-direction: column; height: 100%">
-        <div class="form-group">
-            <label>Data Type</label>
-            <div id="dataType" style="font-weight: bold; text-transform: uppercase;">
-                {{#if dataType}}
-                    {{dataType}}
-                {{else}}
-                    No Data
-                {{/if}}
-            </div>
-            <p class="notes">The type of content that will be imported.</p>
+<div style="display:flex; flex-direction: column; height: 100%">
+    <div class="form-group">
+        <label>Data Type</label>
+        <div id="dataType" style="font-weight: bold; text-transform: uppercase;">
+            {{#if dataType}}
+                {{dataType}}
+            {{else}}
+                No Data
+            {{/if}}
         </div>
-
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="preferCompendium" {{#if preferCompendium}}checked{{/if}}>
-                Prefer Compendium?
-            </label>
-            <p class="notes">Use compendium data if available instead of importing entries from json.</p>
-        </div>
-
-        <div style="flex: 1 1">
-            <textarea name="text" placeholder="Your Fultimator import string" style="height:100%; resize: none">{{text}}</textarea>
-        </div>
-        {{#if error}}
-        <div style="flex: 0 0; color: red">
-            {{error}}
-        </div>
-        {{/if}}
-        <div style="flex: 0 0; width: 75%; padding: 10px">
-            <button id="sub" {{#if disabled}}disabled{{/if}}>Import Data</button>
-        </div>
+        <p class="notes">The type of content that will be imported.</p>
     </div>
-</form>
+
+    <div class="form-group">
+        <label>
+            <input type="checkbox" name="preferCompendium" {{#if preferCompendium}}checked{{/if}}>
+            Prefer Compendium?
+        </label>
+        <p class="notes">Use compendium data if available instead of importing entries from json.</p>
+    </div>
+
+    <div style="flex: 1 1">
+        <textarea name="text" placeholder="Your Fultimator import string" style="height:100%; resize: none">{{text}}</textarea>
+    </div>
+    {{#if error}}
+    <div style="flex: 0 0; color: red">
+        {{error}}
+    </div>
+    {{/if}}
+    <div style="flex: 0 0; width: 75%; padding: 10px">
+        <button type="button" data-action="import" {{#if disabled}}disabled{{/if}}>Import Data</button>
+    </div>
+</div>
