@@ -88,8 +88,45 @@ type ImportPDFData = ImportPDFSubmissionData & {
 	bookTypes: Record<BookType, string>;
 };
 
-export class ImportPDFApplication extends FormApplication<ImportPDFData> {
-	async _updateObject<T extends ImportPDFSubmissionData>(_e: Event, data: T) {
+export class ImportPDFApplication extends foundry.applications.api.HandlebarsApplicationMixin(
+	foundry.applications.api.ApplicationV2,
+) {
+	object: ImportPDFData;
+
+	constructor(object: ImportPDFData, options?: Partial<foundry.applications.api.ApplicationConfiguration>) {
+		super(options);
+		this.object = object;
+	}
+
+	static DEFAULT_OPTIONS = {
+		id: "fu-parser-import-pdf",
+		tag: "form",
+		classes: ["fu-parser"],
+		window: {
+			title: "Fabula Ultima PDF importer",
+			resizable: true,
+		},
+		position: {
+			width: 450,
+			height: 600,
+		},
+		form: {
+			handler: ImportPDFApplication.#onSubmit,
+			submitOnChange: true,
+			closeOnSubmit: false,
+		},
+		actions: {
+			import: ImportPDFApplication.#onImport,
+			toggleCollapse: ImportPDFApplication.#onToggleCollapse,
+		},
+	};
+
+	static PARTS = {
+		form: { template: "modules/fu-parser/templates/import-pdf.hbs", scrollable: [".fu-parser-parse-list"] },
+	};
+
+	static async #onSubmit(this: ImportPDFApplication, _event: Event, _form: HTMLFormElement, formData: FormDataExtended) {
+		const data = formData.object as ImportPDFSubmissionData;
 		if (data.imagePath != this.object.imagePath) {
 			this.object.imagePath = data.imagePath;
 		}
@@ -107,7 +144,29 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 		this.render();
 	}
 
-	async getData(): Promise<ImportPDFData & { disabled: boolean }> {
+	static async #onImport(this: ImportPDFApplication) {
+		this.object.inProgress = true;
+		this.render();
+		const imagePath = normalizeImagePath(this.object.imagePath);
+		for (const p of this.object.parseResults) {
+			if (p.type === "success") {
+				await p.save(imagePath);
+			}
+		}
+		this.close();
+	}
+
+	static #onToggleCollapse(this: ImportPDFApplication, _event: PointerEvent, target: HTMLElement) {
+		target.classList.toggle("fu-parser-active");
+		const content = target.nextElementSibling as HTMLElement | null;
+		if (content?.style.maxHeight) {
+			content.style.maxHeight = "";
+		} else if (content) {
+			content.style.maxHeight = content.scrollHeight + "px";
+		}
+	}
+
+	protected async _prepareContext(): Promise<ImportPDFData & { disabled: boolean }> {
 		return {
 			...this.object,
 			disabled:
@@ -117,13 +176,9 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 				this.object.inProgress,
 		};
 	}
-	get template(): string {
-		return "modules/fu-parser/templates/import-pdf.hbs";
-	}
 
-	async close(options?: unknown) {
+	protected _onClose() {
 		this.cleanupPDFResources();
-		return super.close(options);
 	}
 
 	private cleanupPDFResources() {
@@ -137,33 +192,5 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 		}
 		this.object.parseResults = [];
 		delete this.object.destroy;
-	}
-
-	activateListeners(html: JQuery): void {
-		super.activateListeners(html);
-		html.find(".fu-parser-collapsible").on("click", (e) => {
-			e.preventDefault();
-			const toggle = e.currentTarget;
-			toggle.classList.toggle("fu-parser-active");
-			const content = toggle.nextElementSibling as HTMLElement;
-			if (content?.style.maxHeight) {
-				content.style.maxHeight = "";
-			} else {
-				content.style.maxHeight = content.scrollHeight + "px";
-			}
-		});
-
-		html.find("#sub").on("click", async (e) => {
-			e.preventDefault();
-			this.object.inProgress = true;
-			this.render();
-			const imagePath = normalizeImagePath(this.object.imagePath);
-			for (const p of this.object.parseResults) {
-				if (p.type === "success") {
-					await p.save(imagePath);
-				}
-			}
-			this.close();
-		});
 	}
 }
