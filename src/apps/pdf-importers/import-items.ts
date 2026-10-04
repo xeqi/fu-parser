@@ -65,6 +65,7 @@ export function importItems(
 								const saveFunction = assignSave(category, items, folder, source);
 								return {
 									type: "success" as const,
+									isActor: false,
 									page: pageNum,
 									save: saveFunction,
 								};

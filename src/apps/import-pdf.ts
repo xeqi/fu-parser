@@ -24,7 +24,7 @@ for (const prop of ["deepFlatten", "equals", "partition", "filterJoin", "findSpl
 }
 
 export type ParseResult = { page: number } & (
-	| { type: "success"; save: (imagePath: string) => Promise<void>; cleanup: () => boolean }
+	| { type: "success"; isActor?: boolean; save: (imagePath: string) => Promise<void>; cleanup: () => boolean }
 	| { type: "failure"; errors: { found: string; error: string; distance: number }[] }
 	| { type: "too many"; count: number; errors: { found: string; error: string; distance: number }[] }
 );
@@ -77,7 +77,8 @@ export const bookTypes = {
 
 type ImportPDFSubmissionData = {
 	pdfPath: string;
-	imagePath: string;
+	actorImagePath: string;
+	itemImagePath: string;
 	bookType: BookType;
 };
 
@@ -108,7 +109,7 @@ export class ImportPDFApplication extends foundry.applications.api.HandlebarsApp
 		},
 		position: {
 			width: 450,
-			height: 600,
+			height: 700,
 		},
 		form: {
 			handler: ImportPDFApplication.#onSubmit,
@@ -125,11 +126,24 @@ export class ImportPDFApplication extends foundry.applications.api.HandlebarsApp
 		form: { template: "modules/fu-parser/templates/import-pdf.hbs", scrollable: [".fu-parser-parse-list"] },
 	};
 
-	static async #onSubmit(this: ImportPDFApplication, _event: Event, _form: HTMLFormElement, formData: FormDataExtended) {
+	static async #onSubmit(
+		this: ImportPDFApplication,
+		_event: Event,
+		_form: HTMLFormElement,
+		formData: FormDataExtended,
+	) {
 		const data = formData.object as ImportPDFSubmissionData;
-		if (data.imagePath != this.object.imagePath) {
-			this.object.imagePath = data.imagePath;
+		if (data.actorImagePath != this.object.actorImagePath) {
+			this.object.actorImagePath = data.actorImagePath;
+			if (!this.object.itemImagePath && data.actorImagePath) {
+				this.object.itemImagePath = data.actorImagePath;
+			}
 		}
+
+		if (data.itemImagePath != this.object.itemImagePath) {
+			this.object.itemImagePath = data.itemImagePath;
+		}
+
 		if (data.pdfPath != this.object.pdfPath || data.bookType != this.object.bookType) {
 			this.cleanupPDFResources();
 			this.object.pdfPath = data.pdfPath;
@@ -147,9 +161,11 @@ export class ImportPDFApplication extends foundry.applications.api.HandlebarsApp
 	static async #onImport(this: ImportPDFApplication) {
 		this.object.inProgress = true;
 		this.render();
-		const imagePath = normalizeImagePath(this.object.imagePath);
+		const actorImagePath = normalizeImagePath(this.object.actorImagePath);
+		const itemImagePath = normalizeImagePath(this.object.itemImagePath);
 		for (const p of this.object.parseResults) {
 			if (p.type === "success") {
+				const imagePath = p.isActor ? actorImagePath : itemImagePath;
 				await p.save(imagePath);
 			}
 		}
@@ -170,7 +186,8 @@ export class ImportPDFApplication extends foundry.applications.api.HandlebarsApp
 		return {
 			...this.object,
 			disabled:
-				this.object.imagePath === "" ||
+				this.object.actorImagePath === "" ||
+				this.object.itemImagePath === "" ||
 				this.object.pdfPath === "" ||
 				this.object.parseResults.length == 0 ||
 				this.object.inProgress,

@@ -8,8 +8,12 @@
         <file-picker type="any" name="pdfPath" placeholder="Path to your pdf" value="{{pdfPath}}"></file-picker>
     </div>
     <div class="fu-parser-field">
-        <label class="fu-parser-field-label">Image output folder</label>
-        <file-picker type="folder" name="imagePath" placeholder="Path to save images" value="{{imagePath}}"></file-picker>
+        <label class="fu-parser-field-label">Actor image output folder</label>
+        <file-picker type="folder" name="actorImagePath" placeholder="Path to save actor images" value="{{actorImagePath}}"></file-picker>
+    </div>
+    <div class="fu-parser-field">
+        <label class="fu-parser-field-label">Item image output folder</label>
+        <file-picker type="folder" name="itemImagePath" placeholder="Path to save item images" value="{{itemImagePath}}"></file-picker>
     </div>
     <div class="fu-parser-actions">
         <button type="button" class="fu-parser-import-btn" data-action="import" {{#if disabled}}disabled{{/if}}>
