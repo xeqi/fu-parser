@@ -3,7 +3,7 @@ import fs from "fs";
 import { tokenizePDF } from "../lexers/pdf";
 import { isResult } from "./lib";
 import { Beast } from "../model/beast";
-import { beastiaryFUBA } from "./beastiaryPageBestiary";
+import { beastiaryFUBA, extractArtPageQuickRef } from "./beastiaryPageBestiary";
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FUBA_PDF_PATH = "data/Fabula_Ultima_Bestiary_vol.1.pdf";
@@ -94,6 +94,29 @@ const parsePage = async (page: number): Promise<Beast[]> => {
 			poison: "N",
 		});
 		expect(beast.attacks.map((a) => a.name)).toEqual(["Leaping Bite", "Tendril Lash"]);
+	});
+
+	describe("extractArtPageQuickRef", () => {
+		test("extracts resist/weak text from an art page (BAROMETZ's art page, p108)", async () => {
+			await withPage(108, async (tokens) => {
+				expect(extractArtPageQuickRef(tokens)).toBe(
+					"▲ earth, ice, poison, Resistance (physical, bolt), poisoned, weak, immunity (poisoned).<br>" +
+						"▼ bolt, dazed, enraged, shaken.",
+				);
+			});
+		});
+
+		test("skips the SEE INDIVIDUAL ENTRIES placeholder (ARBOREAL DRAGON's art page, p94)", async () => {
+			await withPage(94, async (tokens) => {
+				expect(extractArtPageQuickRef(tokens)).toBeNull();
+			});
+		});
+
+		test("returns null for a page with no art-page mini-beast block (BAROMETZ's own statblock, p109)", async () => {
+			await withPage(109, async (tokens) => {
+				expect(extractArtPageQuickRef(tokens)).toBeNull();
+			});
+		});
 	});
 
 	afterAll(() => destroy());

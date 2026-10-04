@@ -4,6 +4,8 @@ import {
 	Attributes,
 	Elements,
 	Npc,
+	NpcAccuracy,
+	NpcAttributeValue,
 	NpcArmor,
 	Weapon,
 	Player,
@@ -117,6 +119,34 @@ const lookupAffinity = (affinity?: Affinities) => {
 	if (typeof affinity === "number") return affinity;
 	return affinity ? AFF_MAPPING[affinity.toLowerCase()] : 0;
 };
+
+// Helpers that read a value from either the Fultimator v1 or v2 NPC shape.
+const toNum = (value: string | number | undefined): number => {
+	if (value === undefined || value === "") return 0;
+	const n = Number(value);
+	return Number.isFinite(n) ? n : 0;
+};
+
+const attrDie = (value: NpcAttributeValue): number =>
+	typeof value === "object" && value !== null ? Number(value.base) : Number(value);
+
+const mapElement = (element: string | undefined): DamageType => {
+	if (!element) return "physical";
+	const key = element.toLowerCase();
+	if (key === "air" || key === "wind") return "air";
+	return (ELEMENTS_MAPPING as Record<string, DamageType>)[key] ?? "physical";
+};
+
+const isRangedRange = (range: string | undefined): boolean => range === "distance" || range === "ranged";
+
+const resolveAttackAttrs = (
+	accuracy: NpcAccuracy | undefined,
+	fallbackAttr1: Attributes | undefined,
+	fallbackAttr2: Attributes | undefined,
+): { primary: ATTR; secondary: ATTR } => ({
+	primary: mapAttribute(accuracy?.attr1 ?? fallbackAttr1),
+	secondary: mapAttribute(accuracy?.attr2 ?? fallbackAttr2),
+});
 
 const getName = (name?: string, fallback = "Unnamed") => name?.trim() || fallback;
 
@@ -607,8 +637,8 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 					bonus: 0 as const,
 				},
 				air: {
-					base: lookupAffinity(data.affinities?.wind),
-					current: lookupAffinity(data.affinities?.wind),
+					base: lookupAffinity(data.affinities?.air ?? data.affinities?.wind),
+					current: lookupAffinity(data.affinities?.air ?? data.affinities?.wind),
 					bonus: 0 as const,
 				},
 				bolt: {
@@ -1318,7 +1348,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							// Add the main invocations skill
 							const skillCompendiumItem = await lookupInCompendium("projectfu.skills", fuid);
 							if (skillCompendiumItem) {
-								const itemCopy = duplicate(skillCompendiumItem);
+								const itemCopy = foundry.utils.duplicate(skillCompendiumItem);
 								const rank = mapSkillLevelToRank(pcSpell.skillLevel);
 								if (
 									rank &&
@@ -1339,7 +1369,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 									innerfuid,
 								);
 								if (heroicCompendiumItem) {
-									const heroicCopy = duplicate(heroicCompendiumItem);
+									const heroicCopy = foundry.utils.duplicate(heroicCompendiumItem);
 
 									if (heroicCopy.type === "heroic") {
 										const wellspringLower = pcSpell.chosenWellspring.toLowerCase();
@@ -1429,7 +1459,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							const gardenFuid = "garden";
 							const gardenCompendiumItem = await lookupInCompendium("projectfu.skills", gardenFuid);
 							if (gardenCompendiumItem) {
-								const gardenCopy = duplicate(gardenCompendiumItem);
+								const gardenCopy = foundry.utils.duplicate(gardenCompendiumItem);
 								if (
 									gardenCopy.type === "classFeature" &&
 									gardenCopy.system.featureType !== "projectfu.weaponModule"
@@ -1539,7 +1569,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 							// Add the cookbook skill item
 							const compendiumItem = await lookupInCompendium("projectfu.skills", fuid);
 							if (compendiumItem) {
-								const cookbookCopy = duplicate(compendiumItem);
+								const cookbookCopy = foundry.utils.duplicate(compendiumItem);
 
 								if (
 									cookbookCopy.type === "classFeature" &&
@@ -1587,7 +1617,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 								allYouCanEatFuid,
 							);
 							if (heroicCompendiumItem) {
-								const heroicCopy = duplicate(heroicCompendiumItem);
+								const heroicCopy = foundry.utils.duplicate(heroicCompendiumItem);
 								if (heroicCopy.type === "heroic") {
 									cookingItems.push(heroicCopy as FUItem);
 								}
@@ -1608,7 +1638,7 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 								);
 
 								if (ingredientCompendiumItem) {
-									const ingredientCopy = duplicate(ingredientCompendiumItem);
+									const ingredientCopy = foundry.utils.duplicate(ingredientCompendiumItem);
 
 									// Update quantity from the ingredient inventory
 									if (
@@ -2128,6 +2158,40 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		return [baseNote, ...clockItems];
 	});
 
+	const consumableItems = (data.consumables || []).map((consumable): FUItem => {
+		return {
+			type: "consumable" as const,
+			name: getName(consumable.name, "Unnamed Consumable"),
+			system: {
+				description: parseMarkdown(consumable.description || ""),
+				ipCost: { value: consumable.ipCost ?? 0 },
+			},
+		};
+	});
+
+	// Project FU has no generic "treasure"/inventory item type, so mundane inventory
+	// items are imported as miscAbility entries with value/quantity noted in the body.
+	const itemItems = (data.items || []).map((item): FUItem => {
+		const meta = [
+			item.value != null ? `Value: ${item.value} zenit` : "",
+			item.quantity != null ? `Quantity: ${item.quantity}` : "",
+		]
+			.filter(Boolean)
+			.join(" · ");
+		const body = parseMarkdown(item.description || "");
+		return {
+			type: "miscAbility" as const,
+			name: getName(item.name, "Unnamed Item"),
+			system: {
+				description: meta ? (body ? `${meta}<br><br>${body}` : meta) : body,
+				isBehavior: false,
+				weight: { value: 1 },
+				hasClock: { value: false },
+				hasRoll: { value: false },
+			},
+		};
+	});
+
 	const weaponItems = (data.weapons || []).map((weapon): FUItem => {
 		const type = weapon.type;
 		const category = weapon.category;
@@ -2407,6 +2471,8 @@ const importFultimatorPC = async (data: Player, preferCompendium: boolean = true
 		...spellItems,
 		...noteItems,
 		...quirkItems,
+		...consumableItems,
+		...itemItems,
 	]);
 
 	await actor.rest(true);
@@ -2444,7 +2510,7 @@ const importFultimatorNPC = async (data: Npc) => {
 		.map((e) => {
 			const item = game.items.find((f) => f.name.toLowerCase() === e.name.toLowerCase()) as FUItem;
 			if (item) {
-				const data = duplicate(item);
+				const data = foundry.utils.duplicate(item);
 				const itemType = data.type;
 				if (itemType === "weapon") {
 					if (mainHandFree) {
@@ -2500,8 +2566,8 @@ const importFultimatorNPC = async (data: Npc) => {
 					bonus: 0 as const,
 				},
 				air: {
-					base: lookupAffinity(data.affinities.wind),
-					current: lookupAffinity(data.affinities.wind),
+					base: lookupAffinity(data.affinities.air ?? data.affinities.wind),
+					current: lookupAffinity(data.affinities.air ?? data.affinities.wind),
 					bonus: 0 as const,
 				},
 				bolt: {
@@ -2541,10 +2607,10 @@ const importFultimatorNPC = async (data: Npc) => {
 				},
 			},
 			attributes: {
-				dex: { base: data.attributes.dexterity, current: data.attributes.dexterity, bonus: 0 as const },
-				ins: { base: data.attributes.insight, current: data.attributes.insight, bonus: 0 as const },
-				mig: { base: data.attributes.might, current: data.attributes.might, bonus: 0 as const },
-				wlp: { base: data.attributes.will, current: data.attributes.will, bonus: 0 as const },
+				dex: { base: attrDie(data.attributes.dexterity), current: attrDie(data.attributes.dexterity), bonus: 0 as const },
+				ins: { base: attrDie(data.attributes.insight), current: attrDie(data.attributes.insight), bonus: 0 as const },
+				mig: { base: attrDie(data.attributes.might), current: attrDie(data.attributes.might), bonus: 0 as const },
+				wlp: { base: attrDie(data.attributes.will), current: attrDie(data.attributes.will), bonus: 0 as const },
 			},
 			derived: {
 				init: {
@@ -2577,6 +2643,16 @@ const importFultimatorNPC = async (data: Npc) => {
 					| "custom",
 				replacedSoldiers: data.rank && /champion/.test(data.rank) ? Number(data.rank.slice(-1)) : 1,
 			},
+			...(data.role ? { role: { value: data.role } } : {}),
+			...(data.immunities
+				? {
+						immunities: Object.fromEntries(
+							(["slow", "dazed", "weak", "shaken", "enraged", "poisoned"] as const)
+								.filter((status) => data.immunities?.[status])
+								.map((status) => [status, { base: true }]),
+						),
+					}
+				: {}),
 			study: { value: 0 as const },
 			description: actorDescription,
 		},
@@ -2587,66 +2663,74 @@ const importFultimatorNPC = async (data: Npc) => {
 
 	const actor = await Actor.create(payload);
 
+	const companionBonus = data.rank == "companion" ? data.lvl || 1 : 0;
+
 	const attackItems = data.attacks.map((attack): FUItem => {
+		const { primary, secondary } = resolveAttackAttrs(attack.accuracy, attack.attr1, attack.attr2);
+		// v2 folds the flat bonuses into accuracy.value / damage.value; v1 uses flathit / flatdmg.
+		const flatHit = toNum(attack.accuracy?.value ?? attack.flathit);
+		const flatDmg = toNum(attack.damage?.value ?? attack.flatdmg);
+		const element = attack.damage?.type ?? attack.type;
+		const description = attack.effect ?? (attack.special ? attack.special.join(" ") : "");
 		return {
 			type: "basic" as const,
 			name: attack.name != "" ? attack.name : "Unnamed Attack",
 			system: {
 				attributes: {
-					primary: { value: STAT_MAPPING[attack.attr1] },
-					secondary: { value: STAT_MAPPING[attack.attr2] },
+					primary: { value: primary },
+					secondary: { value: secondary },
 				},
 				accuracy: {
-					value:
-						Math.floor(data.lvl / 10) +
-						(data.rank == "companion" ? data.lvl || 1 : 0) +
-						(attack.flathit ? Number(attack.flathit) : 0),
+					value: Math.floor(data.lvl / 10) + companionBonus + flatHit,
 				},
 				damage: {
 					value:
 						Math.floor(data.lvl / 20) * 5 +
 						5 +
 						(attack.extraDamage ? 5 : 0) +
-						(data.rank == "companion" ? data.lvl || 1 : 0) +
-						(attack.flatdmg ? Number(attack.flatdmg) : 0),
+						companionBonus +
+						flatDmg,
 				},
-				type: { value: attack.range == "distance" ? "ranged" : "melee" },
-				damageType: { value: ELEMENTS_MAPPING[attack.type] },
+				type: { value: isRangedRange(attack.range) ? "ranged" : "melee" },
+				damageType: { value: mapElement(element) },
 				quality: { value: "" },
 				isBehavior: false,
 				weight: { value: 1 },
-				description: parseMarkdown(attack.special.join(" ")),
+				description: parseMarkdown(description),
 			},
 		};
 	});
 
 	const weaponAttackItems = (data.weaponattacks || []).map((attack): FUItem => {
-		const type = attack.type ?? attack.weapon.type ?? "physical";
+		const weapon = attack.weapon;
+		const { primary, secondary } = resolveAttackAttrs(attack.accuracy, weapon?.att1, weapon?.att2);
+		// v2 has no nested weapon: accuracy.value / damage.value carry the weapon's prec / damage.
+		const weaponPrec = weapon ? weapon.prec : toNum(attack.accuracy?.value);
+		const weaponDamage = weapon ? weapon.damage : toNum(attack.damage?.value);
+		const element = attack.damage?.type ?? attack.type ?? weapon?.type;
+		const ranged = weapon ? isRangedRange(weapon.range) : isRangedRange(attack.range);
+		const description = attack.effect ?? (attack.special ? attack.special.join(" ") : "");
 		return {
 			type: "basic" as const,
 			name: attack.name != "" ? attack.name : "Unnamed Weapon Attack",
 			system: {
 				attributes: {
-					primary: { value: STAT_MAPPING[attack.weapon.att1] },
-					secondary: { value: STAT_MAPPING[attack.weapon.att2] },
+					primary: { value: primary },
+					secondary: { value: secondary },
 				},
 				accuracy: {
-					value:
-						Math.floor(data.lvl / 10) +
-						attack.weapon.prec +
-						(data.rank == "companion" ? data.lvl || 1 : 0) +
-						(attack.flathit ? Number(attack.flathit) : 0),
+					value: Math.floor(data.lvl / 10) + weaponPrec + companionBonus + toNum(attack.flathit),
 				},
 				damage: {
 					value:
 						Math.floor(data.lvl / 20) * 5 +
-						attack.weapon.damage +
+						weaponDamage +
 						(attack.extraDamage ? 5 : 0) +
-						(attack.flatdmg ? Number(attack.flatdmg) : 0),
+						toNum(attack.flatdmg),
 				},
-				type: { value: attack.weapon.range == "distance" ? "ranged" : "melee" },
-				damageType: { value: ELEMENTS_MAPPING[type] },
-				description: parseMarkdown(attack.special.join(" ")),
+				type: { value: ranged ? "ranged" : "melee" },
+				damageType: { value: mapElement(element) },
+				description: parseMarkdown(description),
 				isBehavior: false,
 				weight: { value: 1 },
 				quality: { value: "" },
@@ -2655,9 +2739,18 @@ const importFultimatorNPC = async (data: Npc) => {
 	});
 
 	const spellItems = (data.spells || []).map((spell) => {
-		const { targetingRule, maxTargets } = determineTargeting(spell.target, spell.maxTargets);
-		const mpCostResult = parseMpCost(spell.mp);
+		// v2 renamed `target` -> `targetDescription` and replaced `mp` with a `cost` object.
+		const target = spell.targetDescription ?? spell.target;
+		const { targetingRule, maxTargets } = determineTargeting(target, spell.maxTargets);
+		const mpCostResult =
+			spell.cost?.amount !== undefined
+				? { amount: spell.cost.amount, perTarget: !!spell.cost.perTarget }
+				: parseMpCost(spell.mp);
 		const perTargetCost = maxTargets > 1 || mpCostResult.perTarget;
+		// v2 exposes an explicit `isOffensive` flag; v1 encoded it as `type === "offensive"`.
+		const isOffensive = spell.isOffensive ?? spell.type == "offensive";
+		const { primary, secondary } = resolveAttackAttrs(spell.accuracy, spell.attr1, spell.attr2);
+		const mpDisplay = spell.cost?.amount ?? spell.mp;
 		return {
 			type: "spell" as const,
 			name: spell.name != "" ? spell.name : "Unnamed Spell",
@@ -2671,23 +2764,22 @@ const importFultimatorNPC = async (data: Npc) => {
 					rule: targetingRule,
 					max: maxTargets,
 				},
-				mpCost: { value: spell.mp },
-				target: { value: spell.target },
+				mpCost: { value: mpDisplay !== undefined ? String(mpDisplay) : "" },
+				target: { value: target || "" },
 				duration: { value: (spell.duration || "").toLowerCase() },
-				isOffensive: { value: spell.type == "offensive" },
-				hasRoll: { value: spell.type == "offensive" },
-				rollInfo:
-					spell.type == "offensive"
-						? {
-								attributes: {
-									primary: { value: STAT_MAPPING[spell.attr1] },
-									secondary: { value: STAT_MAPPING[spell.attr2] },
-								},
-								accuracy: {
-									value: Math.floor(data.lvl / 10) + (data.rank == "companion" ? data.lvl || 1 : 0),
-								},
-							}
-						: undefined,
+				isOffensive: { value: isOffensive },
+				hasRoll: { value: isOffensive },
+				rollInfo: isOffensive
+					? {
+							attributes: {
+								primary: { value: primary },
+								secondary: { value: secondary },
+							},
+							accuracy: {
+								value: Math.floor(data.lvl / 10) + companionBonus,
+							},
+						}
+					: undefined,
 				description: parseMarkdown(spell.effect),
 				isBehavior: false,
 				weight: { value: 1 },
@@ -2790,8 +2882,49 @@ type FultimatorImportData = FultimatorSubmissionData & {
 	preferCompendium: boolean;
 };
 
-export class FultimatorImportApplication extends FormApplication<FultimatorImportData> {
-	async _updateObject<T extends FultimatorSubmissionData>(_e: Event, data: T) {
+export class FultimatorImportApplication extends foundry.applications.api.HandlebarsApplicationMixin(
+	foundry.applications.api.ApplicationV2,
+) {
+	object: FultimatorImportData;
+
+	constructor(object: FultimatorImportData, options?: Partial<foundry.applications.api.ApplicationConfiguration>) {
+		super(options);
+		this.object = object;
+	}
+
+	static DEFAULT_OPTIONS = {
+		id: "fu-parser-import-fultimator",
+		tag: "form",
+		classes: ["fu-parser"],
+		window: {
+			title: "Fultimator import",
+			resizable: true,
+		},
+		position: {
+			width: 450,
+			height: 600,
+		},
+		form: {
+			handler: FultimatorImportApplication.#onSubmit,
+			submitOnChange: true,
+			closeOnSubmit: false,
+		},
+		actions: {
+			import: FultimatorImportApplication.#onImport,
+		},
+	};
+
+	static PARTS = {
+		form: { template: "modules/fu-parser/templates/import-fultimator.hbs" },
+	};
+
+	static async #onSubmit(
+		this: FultimatorImportApplication,
+		_event: Event,
+		_form: HTMLFormElement,
+		formData: FormDataExtended,
+	) {
+		const data = formData.object as FultimatorSubmissionData;
 		// Save the user's checkbox setting
 		this.object.preferCompendium = Boolean(data.preferCompendium && data.preferCompendium);
 
@@ -2853,7 +2986,7 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 		return undefined;
 	}
 
-	async getData(): Promise<FultimatorImportData & { disabled: boolean }> {
+	protected async _prepareContext(): Promise<FultimatorImportData & { disabled: boolean }> {
 		const { text, error, inProgress, dataType, preferCompendium } = this.object;
 		return {
 			...this.object,
@@ -2863,57 +2996,49 @@ export class FultimatorImportApplication extends FormApplication<FultimatorImpor
 		};
 	}
 
-	get template(): string {
-		return "modules/fu-parser/templates/import-fultimator.hbs";
-	}
-
-	activateListeners(html: JQuery): void {
-		super.activateListeners(html);
-		html.find("#sub").on("click", async (e) => {
-			e.preventDefault();
-			this.object.inProgress = true;
-			this.render();
-			let succeeded = false;
-			try {
-				if (this.object.parse) {
-					switch (this.object.dataType) {
-						case DataType.Npc:
-							await importFultimatorNPC(this.object.parse as Npc);
-							break;
-						case DataType.Pc:
-							await importFultimatorPC(this.object.parse as Player, this.object.preferCompendium ?? true);
-							break;
-						case DataType.PCWeapon:
-							await importFultimatorWeapon(this.object.parse as PCWeapon);
-							break;
-						case DataType.PCCustomWeapon:
-							await importFultimatorCustomWeapon(this.object.parse as PCCustomWeapon);
-							break;
-						case DataType.PCShield:
-							await importFultimatorShield(this.object.parse as PCShield);
-							break;
-						case DataType.PCArmor:
-							await importFultimatorArmor(this.object.parse as PCArmor);
-							break;
-						case DataType.PCAccessory:
-							await importFultimatorAccessory(this.object.parse as PCAccessory);
-							break;
-					}
-				}
-				succeeded = true;
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				console.error("[fu-parser] Fultimator import failed", error);
-				this.object.error = message;
-				notifyError(`Fultimator import failed: ${message}`);
-			} finally {
-				this.object.inProgress = false;
-				if (succeeded) {
-					this.close();
-				} else {
-					this.render();
+	static async #onImport(this: FultimatorImportApplication) {
+		this.object.inProgress = true;
+		this.render();
+		let succeeded = false;
+		try {
+			if (this.object.parse) {
+				switch (this.object.dataType) {
+					case DataType.Npc:
+						await importFultimatorNPC(this.object.parse as Npc);
+						break;
+					case DataType.Pc:
+						await importFultimatorPC(this.object.parse as Player, this.object.preferCompendium ?? true);
+						break;
+					case DataType.PCWeapon:
+						await importFultimatorWeapon(this.object.parse as PCWeapon);
+						break;
+					case DataType.PCCustomWeapon:
+						await importFultimatorCustomWeapon(this.object.parse as PCCustomWeapon);
+						break;
+					case DataType.PCShield:
+						await importFultimatorShield(this.object.parse as PCShield);
+						break;
+					case DataType.PCArmor:
+						await importFultimatorArmor(this.object.parse as PCArmor);
+						break;
+					case DataType.PCAccessory:
+						await importFultimatorAccessory(this.object.parse as PCAccessory);
+						break;
 				}
 			}
-		});
+			succeeded = true;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			console.error("[fu-parser] Fultimator import failed", error);
+			this.object.error = message;
+			notifyError(`Fultimator import failed: ${message}`);
+		} finally {
+			this.object.inProgress = false;
+			if (succeeded) {
+				this.close();
+			} else {
+				this.render();
+			}
+		}
 	}
 }

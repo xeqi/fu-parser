@@ -1,6 +1,19 @@
 import { FUItem, getFolder, saveImage } from "../../external/project-fu";
 import { Beast, beastToFuActor } from "../../pdf/model/beast";
 
+const toTitleCase = (str: string): string =>
+	str
+		.toLowerCase()
+		.split(/\s+/)
+		.map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word))
+		.join(" ");
+
+const toKebabCase = (str: string): string =>
+	str
+		.toLowerCase()
+		.replace(/\s+/g, "-")
+		.replace(/[^\w-]/g, "");
+
 const usedImageNames = new Set<string>();
 const uniqueImageName = (name: string): string => {
 	let candidate = name;
@@ -27,11 +40,13 @@ export const saveConsumables = async (
 	imagePath: string,
 ) => {
 	for (const [category, consumables] of categories) {
-		const folder = await getFolder([...folderNames, category], "Item");
+		const folder = await getFolder([...folderNames, toTitleCase(category)], "Item");
 		if (folder) {
 			for (const data of consumables) {
-				const src = await saveImage(data.image, data.name + ".png", imagePath);
+				const titleCaseName = toTitleCase(data.name);
+				const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 				const payload: FUItem = consumableToFuItem(data, imagePath, folder._id, source);
+				payload.name = titleCaseName;
 				if (src) payload.img = src;
 				await Item.create(payload);
 			}
@@ -45,12 +60,14 @@ export const saveWeapons = async (
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of weapons) {
-			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			if (src) {
 				const payload: FUItem = weaponToFuItem(data, imagePath, folder._id, source);
+				payload.name = titleCaseName;
 				payload.img = src;
 				await Item.create(payload);
 			}
@@ -64,11 +81,13 @@ export const saveArmors = async (
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of armors) {
-			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			const payload: FUItem = armorToFuItem(data, imagePath, folder._id, source);
+			payload.name = titleCaseName;
 			if (src) payload.img = src;
 			await Item.create(payload);
 		}
@@ -82,10 +101,12 @@ export const saveAccessories = async (
 	imagePath: string,
 ) => {
 	for (const data of accessories) {
-		const folder = await getFolder(folderNames, "Item");
+		const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 		if (folder) {
-			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			const payload: FUItem = accessoryToFuItem(data, imagePath, folder._id, source);
+			payload.name = titleCaseName;
 			if (src) payload.img = src;
 			await Item.create(payload);
 		}
@@ -98,11 +119,13 @@ export const saveShields = async (
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of shields) {
-			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			const payload: FUItem = shieldToFuItem(data, imagePath, folder._id, source);
+			payload.name = titleCaseName;
 			if (src) payload.img = src;
 			await Item.create(payload);
 		}
@@ -115,12 +138,14 @@ export const saveWeaponModules = async (
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of weaponModules) {
-			const saved = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const saved = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			if (saved && Object.keys(saved).length != 0) {
 				const payload: FUItem = weaponModuleToFuItem(data, imagePath, folder._id, source);
+				payload.name = titleCaseName;
 				await Item.create(payload);
 			}
 		}
@@ -132,10 +157,11 @@ export const saveCampActivities = async (
 	source: string,
 	folderNames: readonly string[],
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of campActivities) {
 			const payload: FUItem = campActivityToFuItem(data, folder._id, source);
+			payload.name = toTitleCase(data.name);
 			await Item.create(payload);
 		}
 	}
@@ -147,11 +173,13 @@ export const saveArcana = async (
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	const folder = await getFolder(folderNames, "Item");
+	const folder = await getFolder(folderNames.map(toTitleCase), "Item");
 	if (folder) {
 		for (const data of arcana) {
-			const src = await saveImage(data.image, data.name + ".png", imagePath);
+			const titleCaseName = toTitleCase(data.name);
+			const src = await saveImage(data.image, toKebabCase(data.name) + ".png", imagePath);
 			const payload: FUItem = arcanumToFuItem(data, imagePath, folder._id, source);
+			payload.name = titleCaseName;
 			if (src) payload.img = src;
 			await Item.create(payload);
 		}
@@ -160,10 +188,11 @@ export const saveArcana = async (
 
 export const saveRules = async (rules: Rule[], source: string, folderNames: readonly string[], imagePath: string) => {
 	for (const data of rules) {
-		const path = data.category ? [...folderNames, data.category] : folderNames;
-		const folder = await getFolder(path, "Item");
+		const path = data.category ? [...folderNames, toTitleCase(data.category)] : folderNames;
+		const folder = await getFolder(path.map(toTitleCase), "Item");
 		if (folder) {
 			const payload: FUItem = ruleToFuItem(data, imagePath, folder._id, source);
+			payload.name = toTitleCase(data.name);
 			await Item.create(payload);
 		}
 	}
@@ -176,11 +205,14 @@ export const saveBeasts = async (
 	imagePath: string,
 ) => {
 	for (const b of beasts) {
-		const subfolder = b.rank === "companion" ? "COMPANION" : b.type;
-		const folder = await getFolder([...folderNames, subfolder], "Actor");
+		const subfolder = b.rank === "companion" ? "Companion" : toTitleCase(b.type);
+		const folder = await getFolder([...folderNames.map(toTitleCase), subfolder], "Actor");
 		if (folder) {
-			const imageName = uniqueImageName(b.name);
+			const titleCaseName = toTitleCase(b.name);
+			const kebabName = toKebabCase(b.name);
+			const imageName = uniqueImageName(kebabName);
 			const [payload, otherItems, equipment] = beastToFuActor(b, imagePath, folder._id, source, imageName);
+			payload.name = titleCaseName;
 			const src = await saveImage(b.image, imageName + ".png", imagePath);
 			if (src) {
 				payload.img = src;

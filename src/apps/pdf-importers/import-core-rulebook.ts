@@ -31,6 +31,7 @@ import { ParseResult } from "../import-pdf";
 type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
 	p: Parser<T[]>,
 	s: (t: T[], source: string, f: readonly string[], imagePath: string) => Promise<void>,
+	isActor?: boolean,
 ) => Promise<ParseResult>;
 
 const BESTIARY_PAGES = [
@@ -369,10 +370,11 @@ function importPages(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 	artOverrides?: Record<string, number>,
 	rankIndex?: Record<string, IndexEntry>,
+	isActorPages?: boolean,
 ): Promise<ParseResult[]> {
 	return Promise.all(
 		Object.entries(pages).map(([pageNumStr, [folders, f]]) => {
-			return f(async (parser, save) => {
+			return f(async (parser, save, isActor = isActorPages) => {
 				const pageNum = Number(pageNumStr);
 				const artCleanups: (() => boolean)[] = [];
 				const [r, cleanup] = await withPage(pageNum, async (data) => {
@@ -394,6 +396,7 @@ function importPages(
 						}
 						return {
 							type: "success" as const,
+							isActor,
 							page: pageNum,
 							results: flatMap<{ name: string } | [string, { name: string }[]], { name: string }>(
 								successes[0].result[0],
@@ -442,37 +445,37 @@ function importPages(
 export function importCoreRulebook(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(PAGES, "FUCR", withPage);
+	return importPages(PAGES, "FUCR", withPage, undefined, undefined, false);
 }
 
 export function importCoreBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(FUCR_BESTIARY_PAGES, "FUCR", withPage);
+	return importPages(FUCR_BESTIARY_PAGES, "FUCR", withPage, undefined, undefined, true);
 }
 
 export function importCoreBasicEquipment(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(FUCR_BASIC_EQUIPMENT_PAGES, "FUCR", withPage);
+	return importPages(FUCR_BASIC_EQUIPMENT_PAGES, "FUCR", withPage, undefined, undefined, false);
 }
 
 export function importHighFantasyBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(FUHF_BESTIARY_PAGES, "FUHF", withPage, FUHF_ART_OVERRIDES);
+	return importPages(FUHF_BESTIARY_PAGES, "FUHF", withPage, FUHF_ART_OVERRIDES, undefined, true);
 }
 
 export function importTechnoFantasyBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(FUTF_BESTIARY_PAGES, "FUTF", withPage, FUTF_ART_OVERRIDES);
+	return importPages(FUTF_BESTIARY_PAGES, "FUTF", withPage, FUTF_ART_OVERRIDES, undefined, true);
 }
 
 export function importNaturalFantasyBestiary(
 	withPage: <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>,
 ): Promise<ParseResult[]> {
-	return importPages(FUNF_BESTIARY_PAGES, "FUNF", withPage, FUNF_ART_OVERRIDES);
+	return importPages(FUNF_BESTIARY_PAGES, "FUNF", withPage, FUNF_ART_OVERRIDES, undefined, true);
 }
 
 export async function importBestiaryVol1(
@@ -480,13 +483,13 @@ export async function importBestiaryVol1(
 ): Promise<ParseResult[]> {
 	const rankIndex = await buildBeastiaryIndex(withPage);
 	const [beasts, companions, arcana, bossSkills, negativeSkills, speciesSkills, roleSkills] = await Promise.all([
-		importPages(FUBA_BESTIARY_PAGES, "FUBA", withPage, FUBA_ART_OVERRIDES, rankIndex),
-		importPages(FUBA_COMPANION_BESTIARY_PAGES, "FUBA", withPage),
-		importPages(FUBA_ARCANA_BESTIARY_PAGES, "FUBA", withPage),
-		importPages(FUBA_BOSS_SKILL_PAGES, "FUBA", withPage),
-		importPages(FUBA_NEGATIVE_SKILL_PAGES, "FUBA", withPage),
-		importPages(FUBA_SPECIES_SKILL_PAGES, "FUBA", withPage),
-		importPages(FUBA_ROLE_SKILLS_PAGES, "FUBA", withPage),
+		importPages(FUBA_BESTIARY_PAGES, "FUBA", withPage, FUBA_ART_OVERRIDES, rankIndex, true),
+		importPages(FUBA_COMPANION_BESTIARY_PAGES, "FUBA", withPage, undefined, undefined, true),
+		importPages(FUBA_ARCANA_BESTIARY_PAGES, "FUBA", withPage, undefined, undefined, false),
+		importPages(FUBA_BOSS_SKILL_PAGES, "FUBA", withPage, undefined, undefined, false),
+		importPages(FUBA_NEGATIVE_SKILL_PAGES, "FUBA", withPage, undefined, undefined, false),
+		importPages(FUBA_SPECIES_SKILL_PAGES, "FUBA", withPage, undefined, undefined, false),
+		importPages(FUBA_ROLE_SKILLS_PAGES, "FUBA", withPage, undefined, undefined, false),
 	]);
 	return [...beasts, ...companions, ...arcana, ...bossSkills, ...negativeSkills, ...speciesSkills, ...roleSkills];
 }

@@ -139,11 +139,14 @@ export type Clocks = {
 	sections: number;
 };
 
+// Fultimator v2 nests the die size under `.base`; pre-v2 exports use a bare number.
+export type NpcAttributeValue = number | { base: number };
+
 export type NpcAttributes = {
-	might: number;
-	insight: number;
-	will: number;
-	dexterity: number;
+	might: NpcAttributeValue;
+	insight: NpcAttributeValue;
+	will: NpcAttributeValue;
+	dexterity: NpcAttributeValue;
 };
 
 export type NpcArmor = {
@@ -156,39 +159,69 @@ export type NpcArmor = {
 	defbonus: number;
 };
 
+export type NpcAccuracy = {
+	attr1?: Attributes;
+	attr2?: Attributes;
+	value?: number;
+	defense?: string;
+};
+
+export type NpcDamage = {
+	value?: number;
+	type?: string; // free string: "physical", "fire", "nodmg", ...
+	hrZero?: boolean;
+};
+
+// v2 nests attrs/element under accuracy/damage; the flat fields are pre-v2.
 export type NpcAttack = {
 	name: string;
-	range: "melee" | "distance";
-	attr1: Attributes;
-	attr2: Attributes;
-	type: Elements;
-	special: string[];
-	extraDamage?: boolean;
-	flatdmg?: string | number;
-	flathit?: string | number;
-};
-
-export type NpcWeaponAttack = {
-	extraDamage?: boolean;
-	weapon: Weapon;
-	name: string;
+	range?: "melee" | "distance" | "ranged";
+	accuracy?: NpcAccuracy;
+	damage?: NpcDamage;
+	effect?: string;
+	attr1?: Attributes;
+	attr2?: Attributes;
 	type?: Elements;
-	special: string[];
+	special?: string[];
+	extraDamage?: boolean;
+	flatdmg?: string | number;
+	flathit?: string | number;
+};
+
+// v2 is flat like NpcAttack; pre-v2 used a nested weapon object.
+export type NpcWeaponAttack = {
+	name: string;
+	accuracy?: NpcAccuracy;
+	damage?: NpcDamage;
+	effect?: string;
+	category?: string;
+	range?: "melee" | "distance" | "ranged";
+	weapon?: Weapon;
+	type?: Elements;
+	special?: string[];
+	extraDamage?: boolean;
 	flathit?: string | number;
 	flatdmg?: string | number;
 };
 
+// v2 uses accuracy/cost/isOffensive/targetDescription; the rest is pre-v2.
 export type NpcSpell = {
+	name: string;
+	accuracy?: NpcAccuracy;
+	damage?: NpcDamage;
+	cost?: { resource?: string; amount?: number; perTarget?: boolean };
+	isOffensive?: boolean;
+	spellType?: string;
+	targetDescription?: string;
 	effect?: string;
 	target?: string;
 	duration?: string;
-	name: string;
-	type: string | null;
-	attr1: Attributes;
-	attr2: Attributes;
-	mp?: string;
+	type?: string | null;
+	attr1?: Attributes;
+	attr2?: Attributes;
+	mp?: string | number;
 	maxTargets?: number;
-	special: string[];
+	special?: string[];
 };
 
 export type NpcAction = {
@@ -209,11 +242,11 @@ export type NpcRareGear = {
 export type NpcExtra = {
 	init?: boolean;
 	precision?: boolean;
-	hp?: string;
-	mp?: string;
+	hp?: string | number; // v2 exports these as numbers; pre-v2 used strings
+	mp?: string | number;
 	def?: number;
 	mDef?: number;
-	extrainit?: string;
+	extrainit?: string | number;
 	magic?: boolean;
 };
 
@@ -236,6 +269,7 @@ export type NpcDerived = {
 
 export type NpcAffinities = {
 	physical?: Affinities;
+	air?: Affinities; // v2 renamed `wind` -> `air`
 	wind?: Affinities;
 	bolt?: Affinities;
 	dark?: Affinities;
@@ -249,6 +283,15 @@ export type NpcAffinities = {
 export type NpcNotes = {
 	name: string;
 	effect: string;
+};
+
+export type NpcImmunities = {
+	slow?: boolean;
+	dazed?: boolean;
+	weak?: boolean;
+	shaken?: boolean;
+	enraged?: boolean;
+	poisoned?: boolean;
 };
 
 export type Npc = {
@@ -274,6 +317,8 @@ export type Npc = {
 		| "champion5"
 		| "champion6"
 		| "companion";
+	role?: "brute" | "hunter" | "mage" | "saboteur" | "sentinel" | "support" | "custom";
+	immunities?: NpcImmunities;
 	traits?: string;
 	actions?: NpcAction[];
 	extra?: NpcExtra;
@@ -320,8 +365,23 @@ export type Player = {
 	shields?: PCArmor[];
 	accessories?: PCAccessory[];
 	notes?: PCNotes[];
+	items?: PCItem[];
+	consumables?: PCConsumable[];
 	modifiers: PCModifiers;
 	quirk?: PCQuirk;
+};
+
+export type PCItem = {
+	name: string;
+	description?: string;
+	value?: number;
+	quantity?: number;
+};
+
+export type PCConsumable = {
+	name: string;
+	description?: string;
+	ipCost?: number;
 };
 
 export type PCInfo = {
@@ -626,6 +686,7 @@ export type PCSpell = {
 
 export type PCAffinities = {
 	physical?: Affinities;
+	air?: Affinities; // v2 renamed `wind` -> `air`
 	wind?: Affinities;
 	bolt?: Affinities;
 	dark?: Affinities;

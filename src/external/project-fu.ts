@@ -11,12 +11,11 @@ declare global {
 	const Hooks: {
 		on(s: "renderSettings", f: (app: unknown, html: JQuery | HTMLElement) => unknown): null;
 	};
-	const duplicate: <T>(d: T) => T;
 	const Folder: { create(payload: { name: string; type: string; folder?: string }): Promise<Folder> };
 	const Item: { create<T extends Item>(payload: T): Promise<T & Document> };
 	const Actor: { create<T extends Actor>(payload: T): Promise<T & Document> };
 	type UploadResult = { path: string } | null | false | Record<string, never>;
-	const FilePicker: {
+	interface FilePickerImpl {
 		/**
 		 * Dispatch a POST request to the server containing a directory path and a file to upload
 		 * @param {string} source   The data source to which the file should be uploaded
@@ -40,7 +39,14 @@ declare global {
 			target: string,
 			options?: { [key: string]: unknown },
 		): Promise<{ target: string; dirs: string[]; files: string[] }>;
-	};
+	}
+	// v13 namespaced locations for helpers whose bare globals are removed in v15.
+	namespace foundry.applications.apps {
+		const FilePicker: { implementation: FilePickerImpl };
+	}
+	namespace foundry.utils {
+		function duplicate<T>(original: T): T;
+	}
 	const ui: {
 		notifications: {
 			error(message: string, options?: { permanent?: boolean }): void;
@@ -48,12 +54,50 @@ declare global {
 			info(message: string, options?: { permanent?: boolean }): void;
 		};
 	};
-	class FormApplication<T> {
-		constructor(object?: T, options?: unknown);
-		render(force?: boolean): FormApplication<T>;
-		activateListeners(html: JQuery): void;
-		object: T;
-		close(options?: unknown): Promise<void>;
+	class FormDataExtended extends FormData {
+		object: Record<string, unknown>;
+	}
+	namespace foundry.applications.api {
+		type ApplicationConfiguration = {
+			id: string;
+			classes: string[];
+			tag: string;
+			window: Partial<{
+				title: string;
+				icon: string | false;
+				resizable: boolean;
+				minimizable: boolean;
+				contentClasses: string[];
+			}>;
+			position: Partial<{
+				width: number | "auto";
+				height: number | "auto";
+				top: number;
+				left: number;
+			}>;
+			actions: Record<string, (this: any, event: PointerEvent, target: HTMLElement) => unknown>;
+			form: Partial<{
+				handler: (this: any, event: Event, form: HTMLFormElement, formData: FormDataExtended) => unknown;
+				submitOnChange: boolean;
+				closeOnSubmit: boolean;
+			}>;
+		};
+		type RenderOptions = { force?: boolean; [key: string]: unknown };
+		type HandlebarsTemplatePart = { template: string; classes?: string[]; scrollable?: string[] };
+		class ApplicationV2 {
+			constructor(options?: Partial<ApplicationConfiguration>);
+			static DEFAULT_OPTIONS: Partial<ApplicationConfiguration>;
+			options: ApplicationConfiguration;
+			get element(): HTMLElement;
+			render(options?: boolean | RenderOptions): Promise<this>;
+			close(options?: unknown): Promise<this>;
+			protected _prepareContext(options: RenderOptions): Promise<Record<string, unknown>>;
+			protected _onRender(context: Record<string, unknown>, options: RenderOptions): void;
+			protected _onClose(options: RenderOptions): void;
+		}
+		function HandlebarsApplicationMixin<TBase extends typeof ApplicationV2>(
+			Base: TBase,
+		): TBase & { PARTS: Record<string, HandlebarsTemplatePart> };
 	}
 }
 
@@ -111,6 +155,8 @@ export const getFolder = async (folders: readonly string[], type: string) => {
 export const normalizeImagePath = (path: string): string =>
 	path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/+/, "").replace(/\/+$/, "");
 
+const getFilePicker = (): FilePickerImpl => foundry.applications.apps.FilePicker.implementation;
+
 const ensuredDirectories = new Set<string>();
 
 // Create each missing segment of `path`, then confirm with browse. createDirectory
@@ -121,13 +167,13 @@ const ensureDirectory = async (source: string, path: string): Promise<void> => {
 	for (const segment of path.split("/").filter((s) => s.length > 0)) {
 		current = current ? `${current}/${segment}` : segment;
 		try {
-			await FilePicker.createDirectory(source, current, {});
+			await getFilePicker().createDirectory(source, current, {});
 		} catch {
 			// Already exists, or failed for another reason.
 		}
 	}
 	try {
-		await FilePicker.browse(source, path);
+		await getFilePicker().browse(source, path);
 	} catch {
 		throw new Error(
 			`Could not create or access the image directory "${path}" under the "${source}" source. ` +
@@ -165,7 +211,7 @@ export const saveImage = async (img: Image, name: string, imagePath: string): Pr
 				});
 			});
 			if (blob) {
-				const result = await FilePicker.upload("data", path, new File([blob], name), {}, { notify: false });
+				const result = await getFilePicker().upload("data", path, new File([blob], name), {}, { notify: false });
 				if (result && typeof result === "object" && "path" in result && typeof result.path === "string") {
 					return result.path;
 				}
@@ -424,6 +470,14 @@ export type FUItem = Item &
 		| {
 				type: "consumable";
 				system: Base & { ipCost: { value: number } };
+		  }
+		| {
+				type: "treasure";
+				system: Base & {
+					cost: { value: number };
+					quantity: { value: number };
+					origin?: { value: string };
+				};
 		  }
 		| {
 				type: "basic";

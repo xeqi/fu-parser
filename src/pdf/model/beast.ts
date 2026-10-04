@@ -334,7 +334,7 @@ function extractBeastEquipment(b: Beast): FUItem[] {
 		.map((e) => {
 			const item = game.items.find((f) => f.name.toLowerCase() === e.toLowerCase()) as FUItem;
 			if (item) {
-				const data = duplicate(item);
+				const data = foundry.utils.duplicate(item);
 				const itemType = data.type;
 				if (itemType === "weapon") {
 					if (mainHandFree) {

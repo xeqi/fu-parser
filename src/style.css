@@ -60,14 +60,78 @@
     /* Unicode character for "minus" sign (-) */
 }
 
+.fu-parser .window-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .fu-parser-pdf-form {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 10px;
 }
 
 .fu-parser-parse-list {
-    flex: 1 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     padding: 10px 0px;
+}
+
+.fu-parser-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.fu-parser-field-label {
+    font-weight: bold;
+}
+
+.fu-parser-field > select {
+    width: 100%;
+}
+
+.fu-parser-field > file-picker {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+}
+
+.fu-parser-field > file-picker > input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fu-parser-field > file-picker > button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 40px;
+    padding: 0 12px;
+}
+
+.fu-parser-actions {
+    padding: 10px 0;
+}
+
+.fu-parser-import-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.fu-parser-import-btn:disabled {
+    cursor: default;
+    opacity: 0.6;
 }
